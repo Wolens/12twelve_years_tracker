@@ -86,7 +86,7 @@ export default function TodayPage() {
 
   return (
     <div className="space-y-4 px-4 pt-4 pb-8">
-      <header>
+      <header data-tour="today-board">
         <h1 className="font-display text-2xl font-bold">Сегодня</h1>
         <p className="text-sm text-muted-foreground">
           {today}

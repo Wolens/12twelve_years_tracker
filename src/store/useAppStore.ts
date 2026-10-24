@@ -86,6 +86,7 @@ type Store = AppState & {
   clearLevelUpEvent: () => void;
   completeOnboarding: (spheres: Sphere[]) => void;
   setTourComplete: () => void;
+  restartTour: () => void;
   setTheme: (theme: ThemeMode) => void;
   updateProfile: (patch: Partial<AppState["profile"]>) => void;
   addSphere: (sphere: Omit<Sphere, "id">) => void;
@@ -194,6 +195,7 @@ export const useAppStore = create<Store>()(
       },
 
       setTourComplete: () => set({ tourComplete: true }),
+      restartTour: () => set({ tourComplete: false }),
       setTheme: (theme) => set({ theme }),
       updateProfile: (patch) =>
         set((s) => ({ profile: { ...s.profile, ...patch } })),

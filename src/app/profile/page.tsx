@@ -25,7 +25,7 @@ export default function ProfilePage() {
       <h1 className="font-display text-2xl font-bold">Профиль</h1>
       <SphereFilterBar />
 
-      <Card>
+      <Card data-tour="profile-xp">
         <CardContent className="pt-6 text-center">
           <AvatarPicker />
           <p className="mt-2 text-sm text-muted-foreground">Нажмите, чтобы выбрать аватар</p>

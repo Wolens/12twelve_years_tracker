@@ -31,6 +31,33 @@ npm run dev
 
 Первый вход после регистрации подтянет локальные данные в облако, если в аккаунте ещё пусто.
 
+## Продакшен (для разработчиков и AI-ассистентов)
+
+**Это живой сайт с реальными пользователями.** Не отключать RLS, не коммитить секреты, не выкладывать дампы `user_profiles` / `app_state` в чаты и issues.
+
+| Что | Значение |
+|-----|----------|
+| Основной URL | https://curious-frangollo-7d930e.netlify.app |
+| Хостинг | [Netlify](https://www.netlify.com) (Next.js Runtime, `netlify.toml`) |
+| Репозиторий | https://github.com/Wolens/12twelve_years_tracker |
+| Бэкенд | Supabase Auth + таблица `public.user_profiles` (`app_state` jsonb), схема в `supabase/schema.sql` |
+| Доступ к сайту | Netlify **Visitor access → Public** (не Private) |
+
+Permalink отдельного деплоя (не обязательно основной домен):  
+https://6adcdd46978ce9f88d6e13fc--curious-frangollo-7d930e.netlify.app/
+
+**Переменные окружения** (локально `.env.local`, на Netlify в UI — не в git):
+
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` (значение = Publishable key в Supabase)
+
+**Supabase Auth → Redirect URLs** должны включать:
+
+- `https://curious-frangollo-7d930e.netlify.app/auth/callback`
+- `http://localhost:3000/auth/callback` (для разработки)
+
+**Синхронизация данных:** гость — `localStorage` (`useAppStore`); после входа — загрузка/сохранение в Supabase (`src/lib/cloud-sync.ts`, `useAuthStore` + `app-providers.tsx`).
+
 ## Страницы
 
 | Путь | Описание |
@@ -56,11 +83,12 @@ npm run dev
 
 ```
 src/
-  app/           # маршруты App Router
+  app/           # маршруты App Router (+ auth/callback)
   components/    # UI, дашборд, графики, онбординг
-  lib/           # геймификация, цели, демо-данные
-  store/         # Zustand (useAppStore)
+  lib/           # геймификация, cloud-sync, supabase/
+  store/         # useAppStore (local), useAuthStore (Supabase Auth)
   types/         # модели данных + версия хранилища
+supabase/        # schema.sql для прод-БД
 ```
 
 Ключ localStorage: `twelve-weeks-tracker-v1`.

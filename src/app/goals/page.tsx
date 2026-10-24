@@ -24,7 +24,7 @@ export default function GoalsPage() {
 
   return (
     <div className="space-y-4 px-4 pt-4 pb-8">
-      <div>
+      <div data-tour="goals-board">
         <h1 className="font-display text-2xl font-bold">Цели</h1>
         <p className="text-sm text-muted-foreground">
           Цели на весь 12-недельный период. Недельные задачи — в разделе «12 недель».

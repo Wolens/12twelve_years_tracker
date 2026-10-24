@@ -5,6 +5,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { useAppStore } from "@/store/useAppStore";
 import { BottomNav } from "./bottom-nav";
 import { OnboardingTour } from "@/components/onboarding/onboarding-tour";
+import { cn } from "@/lib/utils";
 
 function useHydrated() {
   const [ready, setReady] = useState(false);
@@ -29,8 +30,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     }
   }, [ready, onboardingComplete, pathname, router]);
 
+  const isOnboarding = pathname === "/onboarding";
+
   return (
-    <div className="mx-auto min-h-dvh max-w-lg pb-24 md:max-w-4xl md:pb-8 md:pt-4">
+    <div
+      className={cn(
+        "mx-auto min-h-dvh",
+        isOnboarding
+          ? "max-w-none"
+          : "max-w-lg pb-24 md:max-w-4xl md:pb-8 md:pt-4"
+      )}
+    >
       {children}
       <BottomNav />
       {onboardingComplete && <OnboardingTour />}

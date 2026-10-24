@@ -8,18 +8,21 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "@/components/ui/use-toast";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { SphereFilterBar } from "@/components/spheres/sphere-filter-bar";
 import { SphereEditDialog } from "@/components/spheres/sphere-edit-dialog";
 import { SphereAddDialog } from "@/components/spheres/sphere-add-dialog";
 import { WeekControls } from "@/components/dashboard/week-controls";
 
 export default function SettingsPage() {
+  const router = useRouter();
   const theme = useAppStore((s) => s.theme);
   const spheres = useAppStore((s) => s.spheres);
   const deleteSphere = useAppStore((s) => s.deleteSphere);
   const setTheme = useAppStore((s) => s.setTheme);
   const resetCycle = useAppStore((s) => s.resetCycle);
   const loadDemoData = useAppStore((s) => s.loadDemoData);
+  const restartTour = useAppStore((s) => s.restartTour);
   const exportState = useAppStore((s) => s.exportState);
   const importState = useAppStore((s) => s.importState);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -118,6 +121,16 @@ export default function SettingsPage() {
         <CardContent className="space-y-2">
           <Button variant="secondary" className="w-full" onClick={loadDemoData}>
             Заполнить примером
+          </Button>
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={() => {
+              restartTour();
+              router.push("/");
+            }}
+          >
+            Показать подсказки
           </Button>
           <Button variant="outline" className="w-full" onClick={exportJson}>
             Экспорт JSON

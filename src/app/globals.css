@@ -63,6 +63,10 @@
   @apply rounded-xl border border-white/10 bg-card/60 backdrop-blur-xl shadow-lg;
 }
 
+[data-tour] {
+  scroll-margin: 96px;
+}
+
 @media print {
   body {
     background: white !important;

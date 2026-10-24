@@ -46,7 +46,7 @@ export default function DashboardPage() {
               </p>
             </div>
           </div>
-          <div className="mt-3">
+          <div className="mt-3" data-tour="xp-bar">
             <div className="mb-1 flex justify-between text-xs text-muted-foreground">
               <span>Ур. {xp.level}</span>
               <span>{Math.round(xp.percent)}% до {xp.level + 1}</span>

@@ -14,7 +14,7 @@ type Props = {
 
 export function WeekStrip({ activeWeek, weeks, selectedWeek, onSelect }: Props) {
   return (
-    <div className="no-print overflow-x-auto pb-2">
+    <div className="no-print overflow-x-auto pb-2" data-tour="week-map">
       <div className="flex min-w-max gap-2 px-4 md:grid md:min-w-0 md:grid-cols-6 md:gap-2 lg:grid-cols-12">
         {weeks.map((w) => {
           const isCurrent = w.number === activeWeek;
