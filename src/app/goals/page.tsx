@@ -51,10 +51,10 @@ export default function GoalsPage() {
         return (
           <Card key={sphere.id} className="overflow-hidden">
             <CardHeader
-              className="flex flex-row items-center justify-between space-y-0"
+              className="flex flex-row flex-wrap items-center justify-between gap-2 space-y-0"
               style={{ borderLeftColor: sphere.color, borderLeftWidth: 4 }}
             >
-              <CardTitle className="text-lg">
+              <CardTitle className="min-w-0 flex-1 break-words text-base leading-snug sm:text-lg">
                 {sphere.icon} {sphere.name}
               </CardTitle>
               <GoalFormDialog
@@ -76,41 +76,52 @@ export default function GoalsPage() {
                   key={g.id}
                   className="rounded-lg border border-white/5 bg-background/20 p-3"
                 >
-                  <div className="flex items-start gap-2">
-                    {g.type === "onetime" && (
-                      <Checkbox
-                        checked={isOnetimeComplete(g)}
-                        onCheckedChange={() => toggleGoalDone(g.id)}
-                      />
-                    )}
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium leading-snug">{g.title}</p>
-                      <p className="text-[10px] uppercase text-muted-foreground">
-                        {g.type === "onetime"
-                          ? "Разовая"
-                          : g.type === "counter"
-                            ? "Счётчик"
-                            : "Метрика"}
-                        {isGoalComplete(g) && " · выполнена"}
-                      </p>
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-start gap-2">
+                      {g.type === "onetime" && (
+                        <Checkbox
+                          checked={isOnetimeComplete(g)}
+                          onCheckedChange={() => toggleGoalDone(g.id)}
+                        />
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <p className="break-words text-sm font-medium leading-snug">
+                          {g.title}
+                        </p>
+                        <p className="text-[10px] uppercase text-muted-foreground">
+                          {g.type === "onetime"
+                            ? "Разовая"
+                            : g.type === "counter"
+                              ? "Счётчик"
+                              : "Метрика"}
+                          {isGoalComplete(g) && " · выполнена"}
+                        </p>
+                      </div>
                     </div>
-                    <div className="flex shrink-0 flex-wrap justify-end gap-1">
+                    <div className="flex flex-wrap gap-1">
                       <Button
                         size="sm"
                         variant="outline"
+                        className="h-8 px-2.5"
                         onClick={() =>
                           setExpandedTasksId(expandedTasksId === g.id ? null : g.id)
                         }
                       >
                         Задачи
                       </Button>
-                      <Button size="sm" variant="secondary" onClick={() => setEditingGoal(g)}>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        className="h-8 px-2.5"
+                        onClick={() => setEditingGoal(g)}
+                      >
                         Изменить
                       </Button>
                       {(g.type === "counter" || g.type === "metric") && (
                         <Button
                           size="sm"
                           variant="ghost"
+                          className="h-8 px-2.5"
                           onClick={() =>
                             setExpandedMetricId(expandedMetricId === g.id ? null : g.id)
                           }
@@ -121,6 +132,7 @@ export default function GoalsPage() {
                       <Button
                         size="sm"
                         variant="destructive"
+                        className="h-8 px-2.5"
                         onClick={() => deleteGoal(g.id)}
                       >
                         ×

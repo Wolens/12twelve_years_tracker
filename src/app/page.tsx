@@ -24,11 +24,7 @@ export default function DashboardPage() {
   return (
     <div className="space-y-4">
       <header className="px-4 pt-4">
-        <motion.div
-          initial={{ opacity: 0, y: -8 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="glass-card p-4"
-        >
+        <motion.div className="glass-card p-4">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="font-display text-2xl font-bold tracking-tight md:text-3xl">

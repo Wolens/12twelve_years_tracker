@@ -56,11 +56,7 @@ export function WeekDetail({ week }: Props) {
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="space-y-4 px-4"
-    >
+    <motion.div className="space-y-4 px-4">
       <SphereFilterBar className="px-0" />
 
       <Card>

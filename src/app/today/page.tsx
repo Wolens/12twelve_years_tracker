@@ -11,6 +11,7 @@ import { groupWeekTasksBySphere, visibleSpheres } from "@/lib/sphere-filters";
 import { goalsForDay } from "@/lib/day-plan";
 import { cn } from "@/lib/utils";
 import type { CycleTask } from "@/types";
+import { ArrowDown, ArrowUp } from "lucide-react";
 
 export default function TodayPage() {
   const goals = useAppStore((s) => s.goals);
@@ -178,7 +179,7 @@ export default function TodayPage() {
             <CardContent className="min-h-[120px] space-y-4">
               {assignedBySphere.length === 0 && (
                 <p className="text-sm text-muted-foreground">
-                  Перетащите задачи сюда из «Задачи недели» справа
+                  Нажмите «В план» у задачи ниже — или перетащите её сюда
                 </p>
               )}
               {assignedBySphere.map(({ sphere, tasks }) => (
@@ -219,9 +220,11 @@ export default function TodayPage() {
                         <Button
                           size="sm"
                           variant="ghost"
-                          className="shrink-0 text-xs"
+                          className="h-8 shrink-0 px-2 text-xs"
+                          onPointerDown={(e) => e.stopPropagation()}
                           onClick={() => unassignTaskFromDayPlan(task.id, week)}
                         >
+                          <ArrowDown className="h-3.5 w-3.5" />
                           В неделю
                         </Button>
                       </div>
@@ -242,7 +245,7 @@ export default function TodayPage() {
             Задачи недели {week}
           </p>
           <p className="text-[10px] text-muted-foreground">
-            Перетащите сюда задачу из плана дня, чтобы вернуть в неделю
+            «В план» добавляет задачу в день {selectedDay}. «В неделю» возвращает обратно.
           </p>
           {unassigned.every((g) => g.tasks.length === 0) && (
             <div className="glass-card border border-dashed border-white/15 p-4 text-center text-xs text-muted-foreground">
@@ -269,9 +272,19 @@ export default function TodayPage() {
                       key={t.id}
                       draggable
                       onDragStart={onDragStart(t.id)}
-                      className="cursor-grab rounded-md border border-white/10 bg-background/50 px-2 py-2 text-sm active:cursor-grabbing"
+                      className="flex cursor-grab items-center gap-2 rounded-md border border-white/10 bg-background/50 px-2 py-2 active:cursor-grabbing"
                     >
-                      {t.title}
+                      <p className="min-w-0 flex-1 text-sm leading-snug">{t.title}</p>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-8 shrink-0 px-2 text-xs"
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={() => assignTaskToDayPlan(t.id, week, selectedDay)}
+                      >
+                        <ArrowUp className="h-3.5 w-3.5" />
+                        В план
+                      </Button>
                     </div>
                   ))}
                 </div>
