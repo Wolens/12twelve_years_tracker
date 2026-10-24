@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 import { subscribeTourNav } from "@/components/onboarding/tour-highlight";
 
 const links = [
-  { href: "/", label: "12 недель", icon: CalendarDays, tourNav: "weeks" },
+  { href: "/", label: "Недели", labelMd: "12 недель", icon: CalendarDays, tourNav: "weeks" },
   { href: "/today", label: "Сегодня", icon: Sun, tourNav: "today" },
   { href: "/goals", label: "Цели", icon: Target, tourNav: "goals" },
   { href: "/stats", label: "Стат", icon: BarChart3, tourNav: "stats" },
@@ -30,8 +30,8 @@ export function BottomNav() {
         tourNav && "z-[90] pointer-events-none"
       )}
     >
-      <div className="mx-auto flex max-w-lg items-center justify-around px-2 py-2 md:max-w-4xl">
-        {links.map(({ href, label, icon: Icon, tourNav: id }) => {
+      <div className="mx-auto flex max-w-lg items-center justify-around px-1 py-2 md:max-w-4xl md:px-2">
+        {links.map(({ href, label, labelMd, icon: Icon, tourNav: id }) => {
           const active = pathname === href;
           const highlighted = tourNav === id;
           return (
@@ -40,7 +40,7 @@ export function BottomNav() {
               href={href}
               data-tour={`nav-${id}`}
               className={cn(
-                "flex flex-col items-center gap-0.5 rounded-lg px-3 py-1.5 text-[10px] font-medium transition-colors",
+                "flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-lg px-1 py-1.5 text-[10px] font-medium leading-tight transition-colors md:flex-none md:px-3",
                 active
                   ? "text-primary"
                   : "text-muted-foreground hover:text-foreground",
@@ -49,15 +49,24 @@ export function BottomNav() {
                 tourNav && !highlighted && "opacity-35"
               )}
             >
-              <Icon className={cn("h-5 w-5", (active || highlighted) && "drop-shadow-[0_0_8px_rgba(52,211,153,0.6)]")} />
-              {label}
+              <Icon className={cn("h-5 w-5 shrink-0", (active || highlighted) && "drop-shadow-[0_0_8px_rgba(52,211,153,0.6)]")} />
+              <span className="whitespace-nowrap">
+                {labelMd ? (
+                  <>
+                    <span className="md:hidden">{label}</span>
+                    <span className="hidden md:inline">{labelMd}</span>
+                  </>
+                ) : (
+                  label
+                )}
+              </span>
             </Link>
           );
         })}
         <Link
           href="/settings"
           className={cn(
-            "flex flex-col items-center gap-0.5 rounded-lg px-3 py-1.5 text-[10px] font-medium text-muted-foreground hover:text-foreground",
+            "flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-lg px-1 py-1.5 text-[10px] font-medium leading-tight text-muted-foreground hover:text-foreground md:flex-none md:px-3",
             pathname === "/settings" && "text-primary",
             tourNav && "opacity-35"
           )}

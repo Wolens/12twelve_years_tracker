@@ -67,6 +67,13 @@
   scroll-margin: 96px;
 }
 
+#nl-badge-frame,
+#nl-hud-frame {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
 @media print {
   body {
     background: white !important;

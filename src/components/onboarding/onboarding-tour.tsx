@@ -4,6 +4,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react
 import { createPortal } from "react-dom";
 import { usePathname, useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useAppStore } from "@/store/useAppStore";
 import { Button } from "@/components/ui/button";
 import { TOUR_STEPS } from "./tour-steps";
@@ -53,7 +54,8 @@ export function OnboardingTour() {
   const setTourComplete = useAppStore((s) => s.setTourComplete);
   const [step, setStep] = useState(0);
   const [hole, setHole] = useState<Hole | null>(null);
-  const [tooltip, setTooltip] = useState({ top: 24, left: 16, width: 320 });
+  const [tooltip, setTooltip] = useState({ top: 0, left: 0, width: 320 });
+  const [tipReady, setTipReady] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [viewport, setViewport] = useState({ w: 0, h: 0 });
   const tooltipRef = useRef<HTMLDivElement>(null);
@@ -77,6 +79,22 @@ export function OnboardingTour() {
     router.replace("/");
   }, [router, setTourComplete]);
 
+  const goPrev = useCallback(() => {
+    setTipReady(false);
+    setHole(null);
+    setStep((s) => Math.max(0, s - 1));
+  }, []);
+
+  const goNext = useCallback(() => {
+    if (isLast) {
+      finish();
+      return;
+    }
+    setTipReady(false);
+    setHole(null);
+    setStep((s) => s + 1);
+  }, [finish, isLast]);
+
   const remeasure = useCallback(async () => {
     if (!current) return;
     const el = await waitForEl(current.selector);
@@ -84,9 +102,10 @@ export function OnboardingTour() {
       setHole(null);
       return;
     }
-    el.scrollIntoView({ block: "center", inline: "nearest", behavior: "smooth" });
-    await new Promise((r) => window.setTimeout(r, 180));
-    setHole(measure(el));
+    el.scrollIntoView({ block: "nearest", inline: "nearest" });
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => setHole(measure(el)));
+    });
   }, [current]);
 
   useEffect(() => {
@@ -96,6 +115,7 @@ export function OnboardingTour() {
     }
     setTourNav(current.nav);
     if (pathname !== current.route) {
+      setTipReady(false);
       setHole(null);
       router.replace(current.route);
       return;
@@ -158,6 +178,7 @@ export function OnboardingTour() {
       left: clampLeft(placed.left),
       width: tw,
     });
+    if (hole) setTipReady(true);
   }, [hole, step, current?.text]);
 
   useEffect(() => {
@@ -227,14 +248,15 @@ export function OnboardingTour() {
           ref={tooltipRef}
           role="dialog"
           aria-labelledby="tour-title"
-          initial={{ opacity: 0, y: 10, scale: 0.98 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: -8, scale: 0.98 }}
+          initial={false}
+          animate={{ opacity: tipReady ? 1 : 0 }}
           className="glass-card absolute z-10 p-4 shadow-2xl"
           style={{
             top: tooltip.top,
             left: tooltip.left,
             width: tooltip.width,
+            visibility: tipReady ? "visible" : "hidden",
+            pointerEvents: tipReady ? "auto" : "none",
           }}
         >
           <div className="flex items-center justify-between gap-2">
@@ -248,9 +270,28 @@ export function OnboardingTour() {
                 />
               ))}
             </div>
-            <p className="text-[11px] text-muted-foreground">
-              {step + 1} / {TOUR_STEPS.length}
-            </p>
+            <div className="flex items-center gap-0.5">
+              <button
+                type="button"
+                aria-label="Предыдущая подсказка"
+                disabled={step === 0}
+                onClick={goPrev}
+                className="rounded-md p-1 text-muted-foreground hover:bg-white/10 hover:text-foreground disabled:pointer-events-none disabled:opacity-30"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <p className="min-w-[2.5rem] text-center text-[11px] text-muted-foreground">
+                {step + 1} / {TOUR_STEPS.length}
+              </p>
+              <button
+                type="button"
+                aria-label="Следующая подсказка"
+                onClick={goNext}
+                className="rounded-md p-1 text-muted-foreground hover:bg-white/10 hover:text-foreground"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
           </div>
           <h2 id="tour-title" className="font-display mt-3 text-xl font-bold">
             {current.title}
@@ -262,13 +303,7 @@ export function OnboardingTour() {
             <Button variant="ghost" className="flex-1" onClick={finish}>
               Пропустить
             </Button>
-            <Button
-              className="flex-1"
-              onClick={() => {
-                if (isLast) finish();
-                else setStep((s) => s + 1);
-              }}
-            >
+            <Button className="flex-1" onClick={goNext}>
               {isLast ? "Играть" : "Далее"}
             </Button>
           </div>

@@ -17,11 +17,25 @@ function useHydrated() {
   return ready;
 }
 
+function BootSplash() {
+  return (
+    <div
+      className="min-h-dvh bg-background"
+      style={{
+        backgroundImage:
+          "radial-gradient(ellipse 70% 45% at 50% 0%, rgba(52,211,153,0.16), transparent 60%), radial-gradient(ellipse 50% 40% at 90% 80%, rgba(167,139,250,0.12), transparent 55%)",
+      }}
+      aria-hidden
+    />
+  );
+}
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const onboardingComplete = useAppStore((s) => s.onboardingComplete);
   const ready = useHydrated();
+  const isOnboarding = pathname === "/onboarding";
 
   useEffect(() => {
     if (!ready) return;
@@ -30,7 +44,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     }
   }, [ready, onboardingComplete, pathname, router]);
 
-  const isOnboarding = pathname === "/onboarding";
+  if (!ready || (!onboardingComplete && !isOnboarding)) {
+    return <BootSplash />;
+  }
 
   return (
     <div

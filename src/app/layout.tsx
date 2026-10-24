@@ -3,6 +3,7 @@ import { Inter, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import { AppProviders } from "@/components/providers/app-providers";
 import { AppShell } from "@/components/layout/app-shell";
+import { HideNetlifyBadge } from "@/components/layout/hide-netlify-badge";
 
 const inter = Inter({ subsets: ["latin", "cyrillic"], variable: "--font-inter" });
 const space = Space_Grotesk({
@@ -32,6 +33,7 @@ export default function RootLayout({
     <html lang="ru" className="dark">
       <body className={`${inter.variable} ${space.variable} font-sans`}>
         <AppProviders>
+          <HideNetlifyBadge />
           <AppShell>{children}</AppShell>
         </AppProviders>
       </body>
