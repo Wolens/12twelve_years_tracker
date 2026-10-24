@@ -1,0 +1,40 @@
+import type { Metadata, Viewport } from "next";
+import { Inter, Space_Grotesk } from "next/font/google";
+import "./globals.css";
+import { AppProviders } from "@/components/providers/app-providers";
+import { AppShell } from "@/components/layout/app-shell";
+
+const inter = Inter({ subsets: ["latin", "cyrillic"], variable: "--font-inter" });
+const space = Space_Grotesk({
+  subsets: ["latin"],
+  variable: "--font-space",
+});
+
+export const metadata: Metadata = {
+  title: "12 недель — трекер целей",
+  description: "Персональный трекер целей по методике 12 недель в году",
+  manifest: "/manifest.json",
+  appleWebApp: { capable: true, title: "12 недель" },
+  icons: { icon: "/icon.svg", apple: "/icon.svg" },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0a0a0f",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+};
+
+export default function RootLayout({
+  children,
+}: Readonly<{ children: React.ReactNode }>) {
+  return (
+    <html lang="ru" className="dark">
+      <body className={`${inter.variable} ${space.variable} font-sans`}>
+        <AppProviders>
+          <AppShell>{children}</AppShell>
+        </AppProviders>
+      </body>
+    </html>
+  );
+}

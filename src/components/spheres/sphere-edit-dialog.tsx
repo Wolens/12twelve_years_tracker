@@ -1,0 +1,108 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import type { Sphere } from "@/types";
+import { useAppStore } from "@/store/useAppStore";
+import { cn } from "@/lib/utils";
+import { Pencil } from "lucide-react";
+
+const COLORS = ["#34d399", "#a78bfa", "#f472b6", "#fbbf24", "#60a5fa", "#fb7185", "#4ade80", "#38bdf8"];
+
+type Props = {
+  sphere: Sphere;
+  trigger?: React.ReactNode;
+};
+
+export function SphereEditDialog({ sphere, trigger }: Props) {
+  const updateSphere = useAppStore((s) => s.updateSphere);
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState(sphere.name);
+  const [icon, setIcon] = useState(sphere.icon);
+  const [color, setColor] = useState(sphere.color);
+
+  useEffect(() => {
+    if (open) {
+      setName(sphere.name);
+      setIcon(sphere.icon);
+      setColor(sphere.color);
+    }
+  }, [open, sphere]);
+
+  const save = () => {
+    if (!name.trim()) return;
+    updateSphere(sphere.id, {
+      name: name.trim(),
+      icon: icon || "⭐",
+      color,
+    });
+    setOpen(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        {trigger ?? (
+          <Button size="sm" variant="outline" className="gap-1">
+            <Pencil className="h-3.5 w-3.5" />
+            Изменить
+          </Button>
+        )}
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Редактировать сферу</DialogTitle>
+        </DialogHeader>
+        <form
+          className="space-y-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            save();
+          }}
+        >
+          <div>
+            <Label>Название</Label>
+            <Input value={name} onChange={(e) => setName(e.target.value)} />
+          </div>
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <Label>Иконка</Label>
+              <Input
+                value={icon}
+                onChange={(e) => setIcon(e.target.value)}
+                maxLength={4}
+              />
+            </div>
+          </div>
+          <div>
+            <Label>Цвет</Label>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {COLORS.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  className={cn(
+                    "h-9 w-9 rounded-full border-2",
+                    color === c ? "border-white" : "border-transparent"
+                  )}
+                  style={{ background: c }}
+                  onClick={() => setColor(c)}
+                />
+              ))}
+            </div>
+          </div>
+          <Button type="submit" className="w-full">Сохранить</Button>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
