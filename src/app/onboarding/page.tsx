@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { hasUserProgress } from "@/lib/app-state-health";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronDown, Sparkles } from "lucide-react";
 import { DEFAULT_SPHERES } from "@/lib/constants";
@@ -19,8 +20,16 @@ type Stage = "welcome" | "spheres";
 
 export default function OnboardingPage() {
   const completeOnboarding = useAppStore((s) => s.completeOnboarding);
+  const repairStateFromLedger = useAppStore((s) => s.repairStateFromLedger);
   const router = useRouter();
   const [stage, setStage] = useState<Stage>("welcome");
+
+  useEffect(() => {
+    const state = useAppStore.getState();
+    if (!hasUserProgress(state)) return;
+    repairStateFromLedger();
+    router.replace("/");
+  }, [repairStateFromLedger, router]);
 
   const defaults = useMemo(
     () =>

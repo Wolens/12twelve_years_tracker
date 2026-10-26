@@ -13,6 +13,7 @@ import { SphereFilterBar } from "@/components/spheres/sphere-filter-bar";
 import { SphereEditDialog } from "@/components/spheres/sphere-edit-dialog";
 import { SphereAddDialog } from "@/components/spheres/sphere-add-dialog";
 import { WeekControls } from "@/components/dashboard/week-controls";
+import { orphanSphereIds, stateNeedsRepair } from "@/lib/app-state-health";
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -25,6 +26,11 @@ export default function SettingsPage() {
   const restartTour = useAppStore((s) => s.restartTour);
   const exportState = useAppStore((s) => s.exportState);
   const importState = useAppStore((s) => s.importState);
+  const repairStateFromLedger = useAppStore((s) => s.repairStateFromLedger);
+  const goals = useAppStore((s) => s.goals);
+  const cycleTasks = useAppStore((s) => s.cycleTasks);
+  const needsRepair = stateNeedsRepair({ goals, spheres, cycleTasks });
+  const orphanCount = orphanSphereIds({ goals, spheres, cycleTasks }).length;
   const fileRef = useRef<HTMLInputElement>(null);
 
   const exportJson = () => {
@@ -119,6 +125,26 @@ export default function SettingsPage() {
           <CardTitle className="text-lg">Данные</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
+          {needsRepair && (
+            <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
+              <p className="font-medium text-amber-100">
+                Найдены цели без сферы ({orphanCount})
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Так бывает после повторного «Начать игру». Восстановим сферы, недели и
+                галочки из журнала XP.
+              </p>
+              <Button
+                className="mt-3 w-full"
+                onClick={() => {
+                  repairStateFromLedger();
+                  toast({ title: "Данные восстановлены" });
+                }}
+              >
+                Восстановить прогресс
+              </Button>
+            </div>
+          )}
           <Button variant="secondary" className="w-full" onClick={loadDemoData}>
             Заполнить примером
           </Button>

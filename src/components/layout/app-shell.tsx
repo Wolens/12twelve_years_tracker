@@ -3,6 +3,9 @@
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAppStore } from "@/store/useAppStore";
+import { useAuthStore } from "@/store/useAuthStore";
+import { waitForCloudHydration } from "@/lib/cloud-hydration";
+import { hasUserProgress } from "@/lib/app-state-health";
 import { BottomNav } from "./bottom-nav";
 import { OnboardingTour } from "@/components/onboarding/onboarding-tour";
 import { subscribeNavPending } from "./nav-pending";
@@ -36,19 +39,37 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const onboardingComplete = useAppStore((s) => s.onboardingComplete);
   const ready = useHydrated();
+  const authInitialized = useAuthStore((s) => s.initialized);
+  const userId = useAuthStore((s) => s.user?.id ?? null);
+  const [cloudReady, setCloudReady] = useState(false);
   const isOnboarding = pathname === "/onboarding";
   const [navPending, setNavPendingHref] = useState<string | null>(null);
 
   useEffect(() => subscribeNavPending(setNavPendingHref), []);
 
   useEffect(() => {
-    if (!ready) return;
+    if (!authInitialized) return;
+    if (!userId) {
+      setCloudReady(true);
+      return;
+    }
+    setCloudReady(false);
+    void waitForCloudHydration(true).then(() => setCloudReady(true));
+  }, [authInitialized, userId]);
+
+  useEffect(() => {
+    if (!ready || !cloudReady) return;
+    const state = useAppStore.getState();
+    if (!state.onboardingComplete && hasUserProgress(state)) {
+      useAppStore.getState().repairStateFromLedger();
+      return;
+    }
     if (!onboardingComplete && pathname !== "/onboarding") {
       router.replace("/onboarding");
     }
-  }, [ready, onboardingComplete, pathname, router]);
+  }, [ready, cloudReady, onboardingComplete, pathname, router]);
 
-  if (!ready || (!onboardingComplete && !isOnboarding)) {
+  if (!ready || !cloudReady || (!onboardingComplete && !isOnboarding)) {
     return <BootSplash />;
   }
 

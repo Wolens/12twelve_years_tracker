@@ -1,14 +1,11 @@
 import type { AppState } from "@/types";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { useAppStore } from "@/store/useAppStore";
+import { appStateRichness, hasUserProgress, repairAppState } from "@/lib/app-state-health";
 
 export function isAppStateEmpty(state: AppState | null | undefined): boolean {
   if (!state) return true;
-  return (
-    !state.onboardingComplete &&
-    state.goals.length === 0 &&
-    state.spheres.length === 0
-  );
+  return !hasUserProgress(state);
 }
 
 export function localAppStateHasData(state: AppState): boolean {
@@ -32,7 +29,7 @@ export async function fetchCloudAppState(
 
   const raw = data?.app_state;
   if (!raw || typeof raw !== "object") return null;
-  return raw as AppState;
+  return repairAppState(raw as AppState);
 }
 
 export async function saveCloudAppState(
@@ -55,17 +52,24 @@ export async function saveCloudAppState(
   return { ok: true };
 }
 
-/** После входа: сервер — источник правды, если там уже есть данные; иначе заливаем локальный снимок. */
+/** После входа: выбираем более полный снимок; никогда не заливаем «пустой» локальный поверх облака. */
 export async function hydrateAppStateFromCloud(userId: string): Promise<void> {
   const remote = await fetchCloudAppState(userId);
-  const local = useAppStore.getState().exportState();
+  const local = repairAppState(useAppStore.getState().exportState());
 
-  if (remote && !isAppStateEmpty(remote)) {
+  const remoteScore = appStateRichness(remote);
+  const localScore = appStateRichness(local);
+
+  if (remote && remoteScore >= localScore && !isAppStateEmpty(remote)) {
     useAppStore.getState().importState(remote);
     return;
   }
 
   if (localAppStateHasData(local)) {
+    if (remote && remoteScore > localScore) {
+      useAppStore.getState().importState(remote);
+      return;
+    }
     await saveCloudAppState(userId, local);
     return;
   }
@@ -73,4 +77,18 @@ export async function hydrateAppStateFromCloud(userId: string): Promise<void> {
   if (remote) {
     useAppStore.getState().importState(remote);
   }
+}
+
+/** Перед сохранением: не перезаписывать богатое облако бедным локальным снимком. */
+export async function saveCloudAppStateSafe(
+  userId: string,
+  state: AppState
+): Promise<void> {
+  const repaired = repairAppState(state);
+  const remote = await fetchCloudAppState(userId);
+  if (remote && appStateRichness(remote) > appStateRichness(repaired) + 5) {
+    useAppStore.getState().importState(remote);
+    return;
+  }
+  await saveCloudAppState(userId, repaired);
 }

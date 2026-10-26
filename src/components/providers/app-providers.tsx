@@ -8,8 +8,13 @@ import { Toaster } from "@/components/ui/toaster";
 import { achievementsNeedSync, syncProfileAchievements } from "@/lib/achievements";
 import {
   hydrateAppStateFromCloud,
-  saveCloudAppState,
+  saveCloudAppStateSafe,
 } from "@/lib/cloud-sync";
+import {
+  markCloudHydrationDone,
+  resetCloudHydrationGate,
+} from "@/lib/cloud-hydration";
+import { repairAppState, stateNeedsRepair } from "@/lib/app-state-health";
 
 export function AppProviders({ children }: { children: React.ReactNode }) {
   const theme = useAppStore((s) => s.theme);
@@ -43,17 +48,35 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
   }, [authInitialized]);
 
   useEffect(() => {
-    if (!authInitialized || !userId) {
+    if (!authInitialized) return;
+
+    if (!userId) {
       hydratedForUser.current = null;
+      resetCloudHydrationGate();
+      markCloudHydrationDone();
+      const state = useAppStore.getState();
+      if (stateNeedsRepair(state)) {
+        useAppStore.getState().repairStateFromLedger();
+      }
       return;
     }
-    if (hydratedForUser.current === userId) return;
 
+    if (hydratedForUser.current === userId) {
+      markCloudHydrationDone();
+      return;
+    }
+
+    resetCloudHydrationGate();
     let cancelled = false;
     (async () => {
       await hydrateAppStateFromCloud(userId);
+      const state = useAppStore.getState();
+      if (stateNeedsRepair(state)) {
+        useAppStore.setState(repairAppState(state));
+      }
       if (!cancelled) {
         hydratedForUser.current = userId;
+        markCloudHydrationDone();
       }
     })();
 
@@ -71,14 +94,14 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
       clearTimeout(syncTimer);
       syncTimer = setTimeout(() => {
         const state = useAppStore.getState().exportState();
-        saveCloudAppState(userId, state);
+        void saveCloudAppStateSafe(userId, state);
       }, 600);
     });
 
     const flush = () => {
       if (hydratedForUser.current !== userId) return;
       const state = useAppStore.getState().exportState();
-      void saveCloudAppState(userId, state);
+      void saveCloudAppStateSafe(userId, state);
     };
     window.addEventListener("beforeunload", flush);
 

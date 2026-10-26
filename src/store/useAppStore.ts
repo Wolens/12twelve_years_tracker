@@ -40,6 +40,7 @@ import { applyDemoPatch, buildDemoGoals } from "@/lib/demo-data";
 import { generateId } from "@/lib/utils";
 import { migrateAppState } from "@/lib/migrate";
 import { assignGoalToDay, removeGoalFromWeekPlan } from "@/lib/day-plan";
+import { hasUserProgress, repairAppState } from "@/lib/app-state-health";
 
 function createInitialWeeks(): WeekData[] {
   return Array.from({ length: 12 }, (_, i) => ({
@@ -85,6 +86,7 @@ type Store = AppState & {
   levelUpEvent: LevelUpEvent;
   clearLevelUpEvent: () => void;
   completeOnboarding: (spheres: Sphere[]) => void;
+  repairStateFromLedger: () => void;
   setTourComplete: () => void;
   restartTour: () => void;
   setTheme: (theme: ThemeMode) => void;
@@ -178,6 +180,15 @@ export const useAppStore = create<Store>()(
           const achievements = [...state.profile.achievements];
           if (!achievements.includes("onboarding_done"))
             achievements.push("onboarding_done");
+
+          if (hasUserProgress(state)) {
+            return repairAppState({
+              ...state,
+              onboardingComplete: true,
+              profile: { ...state.profile, achievements },
+            });
+          }
+
           return {
             spheres:
               spheres.length > 0
@@ -192,6 +203,10 @@ export const useAppStore = create<Store>()(
             profile: { ...state.profile, achievements },
           };
         });
+      },
+
+      repairStateFromLedger: () => {
+        set((state) => repairAppState(state));
       },
 
       setTourComplete: () => set({ tourComplete: true }),
@@ -629,7 +644,8 @@ export const useAppStore = create<Store>()(
 
       importState: (data) => {
         const migrated = migrateAppState({ ...createInitialState(), ...data });
-        set({ ...migrated, levelUpEvent: null });
+        const repaired = repairAppState(migrated);
+        set({ ...repaired, levelUpEvent: null });
       },
 
       exportState: () => {
