@@ -13,6 +13,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useRouter } from "next/navigation";
 import { SeasonMap } from "@/components/onboarding/season-map";
+import { SphereGlyph } from "@/components/spheres/sphere-glyph";
+import { SphereIconPicker } from "@/components/spheres/sphere-icon-picker";
+import type { SphereIconKey } from "@/lib/sphere-icons";
 
 const COLORS = ["#34d399", "#a78bfa", "#f472b6", "#fbbf24", "#60a5fa", "#fb7185"];
 
@@ -42,7 +45,7 @@ export default function OnboardingPage() {
 
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
   const [customName, setCustomName] = useState("");
-  const [customIcon, setCustomIcon] = useState("⭐");
+  const [customIcon, setCustomIcon] = useState<SphereIconKey>("custom");
   const [customColor, setCustomColor] = useState(COLORS[0]);
   const [customSpheres, setCustomSpheres] = useState<Sphere[]>([]);
   const [showCustom, setShowCustom] = useState(false);
@@ -61,7 +64,7 @@ export default function OnboardingPage() {
     const sphere: Sphere = {
       id: generateId(),
       name: customName.trim(),
-      icon: customIcon || "⭐",
+      icon: customIcon,
       color: customColor,
       custom: true,
     };
@@ -209,7 +212,7 @@ export default function OnboardingPage() {
                       type="button"
                       onClick={() => toggle(s.id)}
                       className={cn(
-                        "glass-card p-4 text-left transition-all",
+                        "glass-card flex flex-col gap-3 p-4 text-left transition-all",
                         on && "ring-2 ring-offset-2 ring-offset-background"
                       )}
                       style={
@@ -218,8 +221,8 @@ export default function OnboardingPage() {
                           : undefined
                       }
                     >
-                      <span className="text-2xl">{s.icon}</span>
-                      <p className="mt-2 text-sm font-medium leading-tight">{s.name}</p>
+                      <SphereGlyph icon={s.icon} color={s.color} size="lg" />
+                      <p className="text-sm font-medium leading-tight">{s.name}</p>
                     </button>
                   );
                 })}
@@ -228,11 +231,14 @@ export default function OnboardingPage() {
                     key={s.id}
                     type="button"
                     onClick={() => toggle(s.id)}
-                    className={cn("glass-card p-4 text-left", selected.has(s.id) && "ring-2")}
+                    className={cn(
+                      "glass-card flex flex-col gap-3 p-4 text-left",
+                      selected.has(s.id) && "ring-2"
+                    )}
                     style={{ borderColor: s.color }}
                   >
-                    <span className="text-2xl">{s.icon}</span>
-                    <p className="mt-2 text-sm font-medium">{s.name}</p>
+                    <SphereGlyph icon={s.icon} color={s.color} size="lg" />
+                    <p className="text-sm font-medium">{s.name}</p>
                   </button>
                 ))}
               </div>
@@ -267,15 +273,17 @@ export default function OnboardingPage() {
                           onChange={(e) => setCustomName(e.target.value)}
                           placeholder="Например: Семья"
                         />
-                        <div className="flex gap-2">
-                          <Input
-                            className="w-20"
+                        <div>
+                          <Label className="text-muted-foreground">Знак</Label>
+                          <SphereIconPicker
                             value={customIcon}
-                            onChange={(e) => setCustomIcon(e.target.value)}
-                            maxLength={2}
-                            aria-label="Иконка"
+                            color={customColor}
+                            onChange={setCustomIcon}
                           />
-                          <div className="flex flex-1 gap-1">
+                        </div>
+                        <div>
+                          <Label>Цвет</Label>
+                          <div className="mt-2 flex flex-wrap gap-2">
                             {COLORS.map((c) => (
                               <button
                                 key={c}

@@ -41,7 +41,7 @@ export function recoverMissingSpheres(
     next.push({
       id,
       name: `Сфера ${n} (восстановлено)`,
-      icon: "♻️",
+      icon: "custom",
       color: "#94a3b8",
       custom: true,
     });

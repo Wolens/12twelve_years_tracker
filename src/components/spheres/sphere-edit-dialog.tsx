@@ -15,6 +15,9 @@ import type { Sphere } from "@/types";
 import { useAppStore } from "@/store/useAppStore";
 import { cn } from "@/lib/utils";
 import { Pencil } from "lucide-react";
+import { SphereIconPicker } from "./sphere-icon-picker";
+import type { SphereIconKey } from "@/lib/sphere-icons";
+import { normalizeSphereIcon } from "@/lib/sphere-icons";
 
 const COLORS = ["#34d399", "#a78bfa", "#f472b6", "#fbbf24", "#60a5fa", "#fb7185", "#4ade80", "#38bdf8"];
 
@@ -27,13 +30,13 @@ export function SphereEditDialog({ sphere, trigger }: Props) {
   const updateSphere = useAppStore((s) => s.updateSphere);
   const [open, setOpen] = useState(false);
   const [name, setName] = useState(sphere.name);
-  const [icon, setIcon] = useState(sphere.icon);
+  const [icon, setIcon] = useState<SphereIconKey>(normalizeSphereIcon(sphere.icon));
   const [color, setColor] = useState(sphere.color);
 
   useEffect(() => {
     if (open) {
       setName(sphere.name);
-      setIcon(sphere.icon);
+      setIcon(normalizeSphereIcon(sphere.icon));
       setColor(sphere.color);
     }
   }, [open, sphere]);
@@ -42,7 +45,7 @@ export function SphereEditDialog({ sphere, trigger }: Props) {
     if (!name.trim()) return;
     updateSphere(sphere.id, {
       name: name.trim(),
-      icon: icon || "⭐",
+      icon,
       color,
     });
     setOpen(false);
@@ -73,15 +76,9 @@ export function SphereEditDialog({ sphere, trigger }: Props) {
             <Label>Название</Label>
             <Input value={name} onChange={(e) => setName(e.target.value)} />
           </div>
-          <div className="flex gap-2">
-            <div className="flex-1">
-              <Label>Иконка</Label>
-              <Input
-                value={icon}
-                onChange={(e) => setIcon(e.target.value)}
-                maxLength={4}
-              />
-            </div>
+          <div>
+            <Label>Знак</Label>
+            <SphereIconPicker value={icon} color={color} onChange={setIcon} />
           </div>
           <div>
             <Label>Цвет</Label>

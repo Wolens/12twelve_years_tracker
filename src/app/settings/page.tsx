@@ -9,7 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "@/components/ui/use-toast";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { SphereFilterBar } from "@/components/spheres/sphere-filter-bar";
+import { SphereGlyph } from "@/components/spheres/sphere-glyph";
 import { SphereEditDialog } from "@/components/spheres/sphere-edit-dialog";
 import { SphereAddDialog } from "@/components/spheres/sphere-add-dialog";
 import { WeekControls } from "@/components/dashboard/week-controls";
@@ -64,7 +64,6 @@ export default function SettingsPage() {
   return (
     <div className="space-y-4 px-4 pt-4 pb-8">
       <h1 className="font-display text-2xl font-bold">Настройки</h1>
-      <SphereFilterBar />
       <WeekControls />
 
       <Card>
@@ -82,7 +81,10 @@ export default function SettingsPage() {
               className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-white/10 p-3"
               style={{ borderLeftColor: s.color, borderLeftWidth: 3 }}
             >
-              <span className="text-sm">{s.icon} {s.name}</span>
+              <span className="flex items-center gap-2 text-sm">
+                <SphereGlyph icon={s.icon} color={s.color} size="xs" />
+                {s.name}
+              </span>
               <div className="flex gap-2">
                 <SphereEditDialog sphere={s} />
                 <Button

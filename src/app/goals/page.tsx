@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { isGoalComplete, isOnetimeComplete } from "@/lib/goals";
 import { Checkbox } from "@/components/ui/checkbox";
 import type { Goal } from "@/types";
+import { SphereGlyph } from "@/components/spheres/sphere-glyph";
 
 export default function GoalsPage() {
   const spheres = useAppStore((s) => s.spheres);
@@ -54,8 +55,9 @@ export default function GoalsPage() {
               className="flex flex-row flex-wrap items-center justify-between gap-2 space-y-0"
               style={{ borderLeftColor: sphere.color, borderLeftWidth: 4 }}
             >
-              <CardTitle className="min-w-0 flex-1 break-words text-base leading-snug sm:text-lg">
-                {sphere.icon} {sphere.name}
+              <CardTitle className="flex min-w-0 flex-1 items-center gap-2 break-words text-base leading-snug sm:text-lg">
+                <SphereGlyph icon={sphere.icon} color={sphere.color} size="sm" />
+                <span>{sphere.name}</span>
               </CardTitle>
               <GoalFormDialog
                 defaultSphereId={sphere.id}

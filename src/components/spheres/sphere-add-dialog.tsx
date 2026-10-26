@@ -14,6 +14,8 @@ import { Label } from "@/components/ui/label";
 import { useAppStore } from "@/store/useAppStore";
 import { cn } from "@/lib/utils";
 import { Plus } from "lucide-react";
+import { SphereIconPicker } from "./sphere-icon-picker";
+import type { SphereIconKey } from "@/lib/sphere-icons";
 
 const COLORS = [
   "#34d399",
@@ -30,18 +32,18 @@ export function SphereAddDialog() {
   const addSphere = useAppStore((s) => s.addSphere);
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
-  const [icon, setIcon] = useState("⭐");
+  const [icon, setIcon] = useState<SphereIconKey>("custom");
   const [color, setColor] = useState(COLORS[0]);
 
   const submit = () => {
     if (!name.trim()) return;
     addSphere({
       name: name.trim(),
-      icon: icon || "⭐",
+      icon,
       color,
     });
     setName("");
-    setIcon("⭐");
+    setIcon("custom");
     setColor(COLORS[0]);
     setOpen(false);
   };
@@ -70,12 +72,8 @@ export function SphereAddDialog() {
             <Input value={name} onChange={(e) => setName(e.target.value)} />
           </div>
           <div>
-            <Label>Иконка (эмодзи)</Label>
-            <Input
-              value={icon}
-              onChange={(e) => setIcon(e.target.value)}
-              maxLength={4}
-            />
+            <Label>Знак</Label>
+            <SphereIconPicker value={icon} color={color} onChange={setIcon} />
           </div>
           <div>
             <Label>Цвет</Label>

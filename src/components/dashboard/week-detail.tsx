@@ -17,6 +17,7 @@ import type { WeekReflection } from "@/types";
 import { WeekControls } from "@/components/dashboard/week-controls";
 import type { CycleTask } from "@/types";
 import { Pencil } from "lucide-react";
+import { SphereGlyph } from "@/components/spheres/sphere-glyph";
 
 type Props = { week: number };
 
@@ -57,16 +58,15 @@ export function WeekDetail({ week }: Props) {
 
   return (
     <motion.div className="space-y-4 px-4">
-      <SphereFilterBar className="px-0" />
-
       <Card>
-        <CardHeader>
+        <CardHeader className="space-y-3">
           <CardTitle>Задачи недели {week}</CardTitle>
+          <SphereFilterBar variant="inline" className="px-0" />
         </CardHeader>
         <CardContent className="space-y-6">
           {groups.length === 0 && (
             <p className="text-sm text-muted-foreground">
-              Отметьте сферы в фильтре выше, чтобы видеть блоки задач.
+              Включите сферы в фильтре в шапке карточки — появятся блоки задач.
             </p>
           )}
           {groups.map(({ sphere, tasks }) => {
@@ -76,12 +76,9 @@ export function WeekDetail({ week }: Props) {
             return (
               <div key={sphere.id} className="space-y-3">
                 <div className="flex items-center justify-between gap-2">
-                  <h3
-                    className="flex items-center gap-2 text-sm font-semibold"
-                    style={{ color: sphere.color }}
-                  >
-                    <span>{sphere.icon}</span>
-                    {sphere.name}
+                  <h3 className="flex items-center gap-2 text-sm font-semibold">
+                    <SphereGlyph icon={sphere.icon} color={sphere.color} size="sm" />
+                    <span style={{ color: sphere.color }}>{sphere.name}</span>
                   </h3>
                   <Button
                     size="sm"
@@ -99,8 +96,13 @@ export function WeekDetail({ week }: Props) {
                     key={goal?.id ?? "orphan"}
                     className="rounded-lg border border-white/5 bg-background/20 p-2"
                   >
-                    <p className="px-2 py-1 text-xs font-medium text-muted-foreground">
-                      {goal ? `🎯 ${goal.title}` : "Без цели"}
+                    <p
+                      className="flex items-center gap-2 px-2 py-1.5 text-xs font-medium tracking-wide text-muted-foreground"
+                      style={{ borderLeft: `2px solid ${sphere.color}` }}
+                    >
+                      <span className="text-foreground/90">
+                        {goal ? goal.title : "Задачи без цели"}
+                      </span>
                     </p>
                     <div className="space-y-1">
                       {goalTasks.map((task) => (

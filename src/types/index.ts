@@ -117,4 +117,4 @@ export type AppState = {
 
 export const STORAGE_KEY = "twelve-weeks-tracker-v1";
 export const AUTH_STORAGE_KEY = "twelve-weeks-auth-v1";
-export const DATA_VERSION = 5;
+export const DATA_VERSION = 6;

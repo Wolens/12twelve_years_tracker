@@ -5,6 +5,7 @@ import { getCurrentWeekNumber } from "./gamification";
 import { normalizeActiveWeek } from "./active-week";
 import { syncProfileAchievements } from "./achievements";
 import { migrateProfileXp } from "./xp-ledger";
+import { normalizeSphereIcon } from "./sphere-icons";
 
 type LegacyGoal = Goal & {
   week?: number;
@@ -128,11 +129,17 @@ export function migrateAppState(
 
   const profile = syncProfileAchievements(draft);
 
+  const spheres = (base.spheres ?? []).map((s) => ({
+    ...s,
+    icon: normalizeSphereIcon(s.icon),
+  }));
+
   return {
     ...base,
     version: DATA_VERSION,
     hiddenSphereIds: base.hiddenSphereIds ?? [],
     dayAssignments: base.dayAssignments ?? {},
+    spheres,
     goals,
     cycleTasks,
     weeks,

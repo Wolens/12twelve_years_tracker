@@ -20,7 +20,7 @@ import {
   onetimeStats,
 } from "@/lib/goals";
 import { Flame } from "lucide-react";
-import { SphereFilterBar } from "@/components/spheres/sphere-filter-bar";
+import { SphereGlyph } from "@/components/spheres/sphere-glyph";
 import { filterGoalsByVisibleSpheres } from "@/lib/sphere-filters";
 
 export default function StatsPage() {
@@ -83,8 +83,6 @@ export default function StatsPage() {
   return (
     <div className="space-y-4 px-4 pt-4 pb-8">
       <h1 className="font-display text-2xl font-bold">Статистика</h1>
-      <SphereFilterBar />
-
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">Прогресс цикла</CardTitle>
@@ -124,7 +122,7 @@ export default function StatsPage() {
             <SelectItem value="all">Все сферы</SelectItem>
             {spheres.map((s) => (
               <SelectItem key={s.id} value={s.id}>
-                {s.icon} {s.name}
+                {s.name}
               </SelectItem>
             ))}
           </SelectContent>
@@ -153,7 +151,10 @@ export default function StatsPage() {
               className="flex flex-col gap-1 rounded-lg border border-white/5 p-3 sm:flex-row sm:items-center sm:justify-between"
               style={{ borderLeftColor: sphere.color, borderLeftWidth: 3 }}
             >
-              <span>{sphere.icon} {sphere.name}</span>
+              <span className="flex items-center gap-2">
+                <SphereGlyph icon={sphere.icon} color={sphere.color} size="xs" />
+                {sphere.name}
+              </span>
               <span className="text-sm text-muted-foreground">
                 {done}/{total} целей · {Math.round(avg)}% · разовые {ot.completed}/{ot.total}
               </span>

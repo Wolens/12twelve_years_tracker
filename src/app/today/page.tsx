@@ -12,6 +12,7 @@ import { goalsForDay } from "@/lib/day-plan";
 import { cn } from "@/lib/utils";
 import type { CycleTask } from "@/types";
 import { ArrowDown, ArrowUp } from "lucide-react";
+import { SphereGlyph } from "@/components/spheres/sphere-glyph";
 
 export default function TodayPage() {
   const goals = useAppStore((s) => s.goals);
@@ -146,8 +147,6 @@ export default function TodayPage() {
         </div>
       </div>
 
-      <SphereFilterBar />
-
       <div className="flex flex-col gap-4 lg:flex-row">
         <div className="min-w-0 flex-1 space-y-4">
           <div className="flex gap-1 overflow-x-auto rounded-xl border border-white/10 bg-card/40 p-1">
@@ -184,11 +183,9 @@ export default function TodayPage() {
               )}
               {assignedBySphere.map(({ sphere, tasks }) => (
                 <div key={sphere.id} className="space-y-2">
-                  <h3
-                    className="text-xs font-semibold"
-                    style={{ color: sphere.color }}
-                  >
-                    {sphere.icon} {sphere.name}
+                  <h3 className="flex items-center gap-1.5 text-xs font-semibold">
+                    <SphereGlyph icon={sphere.icon} color={sphere.color} size="xs" />
+                    <span style={{ color: sphere.color }}>{sphere.name}</span>
                   </h3>
                   {tasks.map((task) => {
                     const parent = goals.find((g) => g.id === task.goalId);
@@ -241,6 +238,7 @@ export default function TodayPage() {
           onDragOver={preventDrag}
           onDrop={onDropToPool}
         >
+          <SphereFilterBar variant="inline" />
           <p className="text-sm font-medium text-muted-foreground">
             Задачи недели {week}
           </p>
@@ -260,11 +258,9 @@ export default function TodayPage() {
                 onDragOver={preventDrag}
                 onDrop={onDropToPool}
               >
-                <p
-                  className="mb-2 text-xs font-semibold"
-                  style={{ color: sphere.color }}
-                >
-                  {sphere.icon} {sphere.name}
+                <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold">
+                  <SphereGlyph icon={sphere.icon} color={sphere.color} size="xs" />
+                  <span style={{ color: sphere.color }}>{sphere.name}</span>
                 </p>
                 <div className="space-y-2">
                   {tasks.map((t) => (

@@ -9,7 +9,6 @@ import { xpProgressInLevel, rankTitle } from "@/lib/gamification";
 import { ACHIEVEMENTS_META } from "@/lib/constants";
 import type { AchievementId } from "@/types";
 import { AuthPanel } from "@/components/profile/auth-panel";
-import { SphereFilterBar } from "@/components/spheres/sphere-filter-bar";
 import { AvatarPicker } from "@/components/profile/avatar-picker";
 import { XpHistoryTrigger } from "@/components/profile/xp-history-trigger";
 
@@ -23,8 +22,6 @@ export default function ProfilePage() {
   return (
     <div className="space-y-4 px-4 pt-4 pb-8">
       <h1 className="font-display text-2xl font-bold">Профиль</h1>
-      <SphereFilterBar />
-
       <Card data-tour="profile-xp">
         <CardContent className="pt-6 text-center">
           <AvatarPicker />

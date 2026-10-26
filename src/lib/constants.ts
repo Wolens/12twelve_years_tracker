@@ -1,14 +1,14 @@
 import type { Sphere } from "@/types";
 
 export const DEFAULT_SPHERES: Omit<Sphere, "id">[] = [
-  { name: "Здоровье и тело", icon: "💪", color: "#34d399" },
-  { name: "Ментальное состояние", icon: "🧠", color: "#a78bfa" },
-  { name: "Карьера / работа", icon: "💼", color: "#60a5fa" },
-  { name: "Финансы", icon: "💰", color: "#fbbf24" },
-  { name: "Творчество / хобби", icon: "🎨", color: "#f472b6" },
-  { name: "Обучение", icon: "📚", color: "#38bdf8" },
-  { name: "Отношения", icon: "❤️", color: "#fb7185" },
-  { name: "Личностный рост", icon: "🌱", color: "#4ade80" },
+  { name: "Здоровье и тело", icon: "health", color: "#34d399" },
+  { name: "Ментальное состояние", icon: "mind", color: "#a78bfa" },
+  { name: "Карьера / работа", icon: "career", color: "#60a5fa" },
+  { name: "Финансы", icon: "finance", color: "#fbbf24" },
+  { name: "Творчество / хобби", icon: "creative", color: "#f472b6" },
+  { name: "Обучение", icon: "learn", color: "#38bdf8" },
+  { name: "Отношения", icon: "relations", color: "#fb7185" },
+  { name: "Личностный рост", icon: "growth", color: "#4ade80" },
 ];
 
 export const XP_TASK = 10;
