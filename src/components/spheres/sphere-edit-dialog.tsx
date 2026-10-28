@@ -37,12 +37,11 @@ export function SphereEditDialog({ sphere, trigger, allowDelete }: Props) {
   const [color, setColor] = useState(sphere.color);
 
   useEffect(() => {
-    if (open) {
-      setName(sphere.name);
-      setIcon(preserveSphereIcon(sphere.icon));
-      setColor(sphere.color);
-    }
-  }, [open, sphere]);
+    if (!open) return;
+    setName(sphere.name);
+    setIcon(preserveSphereIcon(sphere.icon));
+    setColor(sphere.color || SPHERE_COLORS[0]);
+  }, [open, sphere.id, sphere.name, sphere.icon]);
 
   const save = () => {
     if (!name.trim()) return;

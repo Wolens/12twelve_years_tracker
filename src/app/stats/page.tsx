@@ -12,7 +12,11 @@ import {
   sumXp,
   filterLedgerSince,
   filterLedgerBySphere,
+  filterLedgerByWeek,
+  xpByDayForWeek,
+  xpBySourceBucketFromLedger,
   xpByDayBySpheres,
+  xpByDayBySpheresForWeek,
   XP_SPHERE_OTHER_KEY,
 } from "@/lib/stats/xp-activity";
 import type { XpChartSeries } from "@/components/stats/stats-xp-chart";
@@ -31,6 +35,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 const StatsXpChart = dynamic(
   () => import("@/components/stats/stats-xp-chart").then((m) => m.StatsXpChart),
@@ -43,7 +48,6 @@ const XP_SOURCE_DAYS = 28;
 export default function StatsPage() {
   const cycleTasks = useAppStore((s) => s.cycleTasks);
   const spheres = useAppStore((s) => s.spheres);
-  const hiddenSphereIds = useAppStore((s) => s.hiddenSphereIds);
   const weeks = useAppStore((s) => s.weeks);
   const profile = useAppStore((s) => s.profile);
   const activeWeek = useAppStore((s) => s.activeWeek);
@@ -53,16 +57,22 @@ export default function StatsPage() {
 
   const [filterSphere, setFilterSphere] = useState<string>("all");
   const [chartBySphere, setChartBySphere] = useState(false);
-  const [taskWeekScope, setTaskWeekScope] = useState<"all" | "active">("all");
+  const [taskWeekScope, setTaskWeekScope] = useState<"all" | "by_week">("all");
+  const [statsWeek, setStatsWeek] = useState(activeWeek);
+
+  useEffect(() => {
+    setStatsWeek(activeWeek);
+  }, [activeWeek]);
 
   useEffect(() => {
     if (filterSphere !== "all") setChartBySphere(false);
   }, [filterSphere]);
 
-  const visibleSpheres = useMemo(
-    () => spheres.filter((s) => !hiddenSphereIds.includes(s.id)),
-    [spheres, hiddenSphereIds]
-  );
+  useEffect(() => {
+    if (filterSphere !== "all" && !spheres.some((s) => s.id === filterSphere)) {
+      setFilterSphere("all");
+    }
+  }, [spheres, filterSphere]);
 
   const overview = useMemo(
     () => computeCycleOverview(cycleTasks, weeks, activeWeek),
@@ -75,27 +85,54 @@ export default function StatsPage() {
   );
 
   const ledger = profile.xpLedger;
+
+  const activityBaseLedger = useMemo(() => {
+    if (taskWeekScope !== "by_week") return ledger;
+    return filterLedgerByWeek(ledger, cycleStartDate, statsWeek);
+  }, [ledger, taskWeekScope, statsWeek, cycleStartDate]);
+
   const activityLedger = useMemo(() => {
-    if (filterSphere === "all") return ledger;
-    return filterLedgerBySphere(ledger, filterSphere, cycleTasks, goals);
-  }, [ledger, filterSphere, cycleTasks, goals]);
-  const xp7d = useMemo(() => xpLast7Days(ledger), [ledger]);
-  const xpDaily = useMemo(() => xpByDay(activityLedger, XP_CHART_DAYS), [activityLedger]);
+    if (filterSphere === "all") return activityBaseLedger;
+    return filterLedgerBySphere(activityBaseLedger, filterSphere, cycleTasks, goals);
+  }, [activityBaseLedger, filterSphere, cycleTasks, goals]);
+
+  const xpDaily = useMemo(() => {
+    if (taskWeekScope === "by_week") {
+      return xpByDayForWeek(activityLedger, cycleStartDate, statsWeek);
+    }
+    return xpByDay(activityLedger, XP_CHART_DAYS);
+  }, [activityLedger, taskWeekScope, cycleStartDate, statsWeek]);
+
   const xpDailyBySphere = useMemo(() => {
     if (filterSphere !== "all" || !chartBySphere) return null;
-    return xpByDayBySpheres(
-      ledger,
-      XP_CHART_DAYS,
-      visibleSpheres.map((s) => s.id),
-      cycleTasks,
-      goals
-    );
-  }, [ledger, filterSphere, chartBySphere, visibleSpheres, cycleTasks, goals]);
+    const sphereIds = spheres.map((s) => s.id);
+    if (taskWeekScope === "by_week") {
+      return xpByDayBySpheresForWeek(
+        ledger,
+        cycleStartDate,
+        statsWeek,
+        sphereIds,
+        cycleTasks,
+        goals
+      );
+    }
+    return xpByDayBySpheres(ledger, XP_CHART_DAYS, sphereIds, cycleTasks, goals);
+  }, [
+    ledger,
+    filterSphere,
+    chartBySphere,
+    spheres,
+    cycleTasks,
+    goals,
+    taskWeekScope,
+    cycleStartDate,
+    statsWeek,
+  ]);
 
   const chartSeries = useMemo((): XpChartSeries[] | undefined => {
     if (!chartBySphere || filterSphere !== "all") return undefined;
     const rows = xpDailyBySphere ?? [];
-    const series: XpChartSeries[] = visibleSpheres.map((s) => ({
+    const series: XpChartSeries[] = spheres.map((s) => ({
       id: s.id,
       name: s.name,
       color: s.color,
@@ -104,29 +141,31 @@ export default function StatsPage() {
       series.push({ id: XP_SPHERE_OTHER_KEY, name: "Прочее", color: "#94a3b8" });
     }
     return series;
-  }, [chartBySphere, filterSphere, visibleSpheres, xpDailyBySphere]);
-  const xpSources = useMemo(
-    () => xpBySourceBucket(activityLedger, XP_SOURCE_DAYS),
-    [activityLedger]
-  );
-  const xpSourceTotal = useMemo(
-    () => sumXp(filterLedgerSince(activityLedger, XP_SOURCE_DAYS)),
-    [activityLedger]
-  );
+  }, [chartBySphere, filterSphere, spheres, xpDailyBySphere]);
+  const xpSources = useMemo(() => {
+    if (taskWeekScope === "by_week") {
+      return xpBySourceBucketFromLedger(activityLedger);
+    }
+    return xpBySourceBucket(activityLedger, XP_SOURCE_DAYS);
+  }, [activityLedger, taskWeekScope]);
+  const xpSourceTotal = useMemo(() => {
+    if (taskWeekScope === "by_week") return sumXp(activityLedger ?? []);
+    return sumXp(filterLedgerSince(activityLedger, XP_SOURCE_DAYS));
+  }, [activityLedger, taskWeekScope]);
+
+  const xp7d = useMemo(() => xpLast7Days(ledger), [ledger]);
 
   const weekXpFn = useMemo(
     () => (week: number) => xpForWeek(ledger, cycleStartDate, week),
     [ledger, cycleStartDate]
   );
 
-  const taskWeekFilter = taskWeekScope === "active" ? activeWeek : undefined;
+  const taskWeekFilter = taskWeekScope === "by_week" ? statsWeek : undefined;
   const weekScopeLabel =
-    taskWeekScope === "active" ? `неделя ${activeWeek}` : "весь цикл";
+    taskWeekScope === "by_week" ? `неделя ${statsWeek}` : "весь цикл";
 
   const spheresToShow =
-    filterSphere === "all"
-      ? visibleSpheres
-      : visibleSpheres.filter((s) => s.id === filterSphere);
+    filterSphere === "all" ? spheres : spheres.filter((s) => s.id === filterSphere);
 
   return (
     <div className="space-y-4 px-4 pt-4 pb-8" data-tour="stats-board">
@@ -156,7 +195,11 @@ export default function StatsPage() {
             </span>
             <Select
               value={taskWeekScope}
-              onValueChange={(v) => setTaskWeekScope(v as "all" | "active")}
+              onValueChange={(v) => {
+                const mode = v as "all" | "by_week";
+                setTaskWeekScope(mode);
+                if (mode === "by_week") setStatsWeek(activeWeek);
+              }}
             >
               <SelectTrigger
                 className="h-9 w-full min-w-[10.5rem] max-w-[12rem] shrink-0 gap-1 overflow-hidden py-1.5 pl-2.5 pr-2 text-xs font-medium leading-none sm:w-[10.5rem] [&>span:first-of-type]:min-w-0 [&>span:first-of-type]:truncate [&>span:first-of-type]:text-left"
@@ -166,7 +209,7 @@ export default function StatsPage() {
               </SelectTrigger>
               <SelectContent align="end" className="min-w-[10.5rem]">
                 <SelectItem value="all">Весь цикл</SelectItem>
-                <SelectItem value="active">Неделя {activeWeek}</SelectItem>
+                <SelectItem value="by_week">По неделям</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -185,7 +228,7 @@ export default function StatsPage() {
           >
             Все
           </button>
-          {visibleSpheres.map((s) => (
+          {spheres.map((s) => (
             <button
               key={s.id}
               type="button"
@@ -208,7 +251,38 @@ export default function StatsPage() {
           ))}
         </div>
 
-        {visibleSpheres.length === 0 ? (
+        {taskWeekScope === "by_week" && (
+          <div className="flex items-center justify-center gap-3">
+            <button
+              type="button"
+              aria-label="Предыдущая неделя"
+              disabled={statsWeek <= 1}
+              onClick={() => setStatsWeek((w) => Math.max(1, w - 1))}
+              className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 text-muted-foreground transition hover:text-foreground disabled:opacity-30"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            <span className="min-w-[7rem] text-center text-sm font-medium tabular-nums">
+              Неделя {statsWeek}
+              {statsWeek === activeWeek && (
+                <span className="mt-0.5 block text-[10px] font-normal text-muted-foreground">
+                  текущая
+                </span>
+              )}
+            </span>
+            <button
+              type="button"
+              aria-label="Следующая неделя"
+              disabled={statsWeek >= 12}
+              onClick={() => setStatsWeek((w) => Math.min(12, w + 1))}
+              className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 text-muted-foreground transition hover:text-foreground disabled:opacity-30"
+            >
+              <ChevronRight className="h-5 w-5" />
+            </button>
+          </div>
+        )}
+
+        {spheres.length === 0 ? (
           <p className="text-sm text-muted-foreground">
             Нет направлений — добавь их при настройке или в «Герой → Цели».
           </p>
@@ -229,7 +303,7 @@ export default function StatsPage() {
       <div className="game-surface space-y-4 p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="font-display text-lg font-semibold">Активность</h2>
-          {filterSphere === "all" && visibleSpheres.length > 0 && (
+          {filterSphere === "all" && spheres.length > 0 && (
             <button
               type="button"
               aria-pressed={chartBySphere}
@@ -246,11 +320,17 @@ export default function StatsPage() {
           )}
         </div>
         <p className="text-xs text-muted-foreground">
-          {filterSphere === "all"
-            ? chartBySphere
-              ? "Опыт по направлениям за 14 дней (ритуал и закрытие недели — в «Прочее»)"
-              : `Здоровье сейчас: ${Math.round(seasonFlame?.value ?? 100)}%`
-            : `Только направление «${spheres.find((s) => s.id === filterSphere)?.name ?? ""}»`}
+          {taskWeekScope === "by_week" ? (
+            <>Активность за неделю {statsWeek}</>
+          ) : filterSphere === "all" ? (
+            chartBySphere ? (
+              "Опыт по направлениям за 14 дней (ритуал и закрытие недели — в «Прочее»)"
+            ) : (
+              `Здоровье сейчас: ${Math.round(seasonFlame?.value ?? 100)}%`
+            )
+          ) : (
+            `Только направление «${spheres.find((s) => s.id === filterSphere)?.name ?? ""}»`
+          )}
         </p>
         <StatsXpChart
           data={chartBySphere && xpDailyBySphere ? xpDailyBySphere : xpDaily}
@@ -258,7 +338,10 @@ export default function StatsPage() {
         />
         <div>
           <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-            Источники XP · {XP_SOURCE_DAYS} дн.
+            Источники XP
+            {taskWeekScope === "by_week"
+              ? ` · неделя ${statsWeek}`
+              : ` · ${XP_SOURCE_DAYS} дн.`}
           </p>
           <StatsXpSources rows={xpSources} total={xpSourceTotal} />
         </div>

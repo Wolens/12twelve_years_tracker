@@ -1,4 +1,4 @@
-import type { AppState, Profile, XpLedgerEntry } from "@/types";
+import type { AppState, Profile, Sphere, XpLedgerEntry } from "@/types";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { useAppStore } from "@/store/useAppStore";
 import { appStateRichness, hasUserProgress, repairAppState } from "@/lib/app-state-health";
@@ -55,12 +55,29 @@ function mergeProfiles(local: Profile, remote: Profile): Profile {
   );
 }
 
+function mergeSpheres(local: Sphere[], remote: Sphere[]): Sphere[] {
+  const remoteById = new Map(remote.map((s) => [s.id, s]));
+  const seen = new Set<string>();
+  const merged: Sphere[] = [];
+
+  for (const ls of local) {
+    seen.add(ls.id);
+    const rs = remoteById.get(ls.id);
+    merged.push(rs ? { ...rs, ...ls } : ls);
+  }
+  for (const rs of remote) {
+    if (!seen.has(rs.id)) merged.push(rs);
+  }
+  if (merged.length > 0) return merged;
+  return local.length > 0 ? local : remote;
+}
+
 function mergePreferringIdentity(
   local: AppState,
   remote: AppState,
   opts?: { preferLocalUi?: boolean }
 ): AppState {
-  const spheres = remote.spheres?.length ? remote.spheres : local.spheres;
+  const spheres = mergeSpheres(local.spheres ?? [], remote.spheres ?? []);
   const merged: AppState = {
     ...remote,
     spheres,

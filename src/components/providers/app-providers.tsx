@@ -92,9 +92,9 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
       } catch (err) {
         console.error("[cloud-sync] hydrate failed", err);
       } finally {
+        markCloudHydrationDone();
         if (!cancelled) {
           hydratedForUser.current = userId;
-          markCloudHydrationDone();
         }
       }
     })();

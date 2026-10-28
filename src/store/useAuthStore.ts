@@ -36,35 +36,38 @@ export const useAuthStore = create<AuthStore>((set) => ({
       return () => {};
     }
 
-    const supabase = getSupabaseBrowserClient();
-    const timeout = window.setTimeout(finish, 4000);
+    const timeout = window.setTimeout(finish, 1500);
+    let subscription: { unsubscribe: () => void } | undefined;
 
-    supabase.auth
-      .getSession()
-      .then(({ data: { session } }) => {
+    try {
+      const supabase = getSupabaseBrowserClient();
+      void supabase.auth
+        .getSession()
+        .then(({ data: { session } }) => {
+          set({
+            session,
+            user: session?.user ?? null,
+            loading: false,
+            initialized: true,
+          });
+        })
+        .catch(() => finish());
+
+      subscription = supabase.auth.onAuthStateChange((_event, session) => {
         set({
           session,
           user: session?.user ?? null,
           loading: false,
           initialized: true,
         });
-      })
-      .catch(() => finish());
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      set({
-        session,
-        user: session?.user ?? null,
-        loading: false,
-        initialized: true,
-      });
-    });
+      }).data.subscription;
+    } catch {
+      finish();
+    }
 
     return () => {
       window.clearTimeout(timeout);
-      subscription.unsubscribe();
+      subscription?.unsubscribe();
     };
   },
 

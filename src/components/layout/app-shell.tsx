@@ -7,7 +7,6 @@ import { useRouter, usePathname } from "next/navigation";
 import { Settings } from "lucide-react";
 import { useAppStore } from "@/store/useAppStore";
 import { useAuthStore } from "@/store/useAuthStore";
-import { waitForCloudHydration } from "@/lib/cloud-hydration";
 import { hasUserProgress } from "@/lib/app-state-health";
 import { ritualClaimedToday } from "@/lib/daily-engagement";
 import { hasDailyEntryRouted, markDailyEntryRouted } from "@/lib/daily-entry";
@@ -21,11 +20,13 @@ const OnboardingTour = dynamic(
   { ssr: false }
 );
 
-const HYDRATE_FALLBACK_MS = 4000;
-const CLOUD_FALLBACK_MS = 8000;
+const HYDRATE_FALLBACK_MS = 800;
+const BOOT_FORCE_SHOW_MS = 2000;
 
 function useHydrated() {
-  const [ready, setReady] = useState(false);
+  const [ready, setReady] = useState(
+    () => typeof window !== "undefined" && useAppStore.persist.hasHydrated()
+  );
   useEffect(() => {
     const finish = () => setReady(true);
     const unsub = useAppStore.persist.onFinishHydration(finish);
@@ -64,39 +65,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const tourComplete = useAppStore((s) => s.tourComplete);
   const ready = useHydrated();
   const authInitialized = useAuthStore((s) => s.initialized);
-  const userId = useAuthStore((s) => s.user?.id ?? null);
-  const [cloudReady, setCloudReady] = useState(() => !userId);
   const isOnboarding = pathname === "/onboarding";
   const [navPending, setNavPendingHref] = useState<string | null>(null);
   const [forceBoot, setForceBoot] = useState(false);
 
   useEffect(() => {
-    const t = window.setTimeout(() => setForceBoot(true), 5000);
+    const t = window.setTimeout(() => setForceBoot(true), BOOT_FORCE_SHOW_MS);
     return () => window.clearTimeout(t);
   }, []);
 
   useEffect(() => subscribeNavPending(setNavPendingHref), []);
-
-  useEffect(() => {
-    if (!authInitialized) return;
-
-    if (!userId) {
-      setCloudReady(true);
-      return;
-    }
-
-    setCloudReady(false);
-    let cancelled = false;
-    const finish = () => {
-      if (!cancelled) setCloudReady(true);
-    };
-    const fallback = window.setTimeout(finish, CLOUD_FALLBACK_MS);
-    void waitForCloudHydration(true).then(finish);
-    return () => {
-      cancelled = true;
-      window.clearTimeout(fallback);
-    };
-  }, [authInitialized, userId]);
 
   useEffect(() => {
     if (!ready || !authInitialized) return;
@@ -108,7 +86,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   useLayoutEffect(() => {
     if (!ready || !authInitialized) return;
-    if (userId && !cloudReady) return;
 
     const state = useAppStore.getState();
     if (state.onboardingComplete) return;
@@ -116,11 +93,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (pathname !== "/onboarding") {
       router.replace("/onboarding");
     }
-  }, [ready, authInitialized, userId, cloudReady, onboardingComplete, pathname, router]);
+  }, [ready, authInitialized, onboardingComplete, pathname, router]);
 
   useLayoutEffect(() => {
     if (!ready || !authInitialized) return;
-    if (userId && !cloudReady) return;
 
     const state = useAppStore.getState();
     if (!state.onboardingComplete || !state.tourComplete) return;
@@ -132,11 +108,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (pathname !== "/path") {
       router.replace("/path");
     }
-  }, [ready, authInitialized, userId, cloudReady, onboardingComplete, tourComplete, pathname, router]);
+  }, [ready, authInitialized, onboardingComplete, tourComplete, pathname, router]);
 
-  const waitingForCloud = Boolean(userId) && !cloudReady;
-  const booting =
-    !forceBoot && (!ready || !authInitialized || waitingForCloud);
+  const booting = !forceBoot && (!ready || !authInitialized);
 
   if (booting) {
     return <BootSplash />;

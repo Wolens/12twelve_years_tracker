@@ -96,21 +96,107 @@ export function xpBySourceBucket(
     .sort((a, b) => b.xp - a.xp);
 }
 
-export function xpForWeek(
+export const XP_SPHERE_OTHER_KEY = "_other";
+
+export type XpDayBySphereRow = { date: string } & Record<string, number>;
+
+export function filterLedgerByWeek(
   ledger: XpLedgerEntry[] | undefined,
   cycleStartDate: string,
   weekNumber: number
-): number {
+): XpLedgerEntry[] {
   const { start, end } = weekDateRange(cycleStartDate, weekNumber);
-  return sumXp(
-    (ledger ?? []).filter((e) => {
-      const d = e.at.slice(0, 10);
-      return d >= start && d <= end;
-    })
-  );
+  return (ledger ?? []).filter((e) => {
+    const d = e.at.slice(0, 10);
+    return d >= start && d <= end;
+  });
 }
 
-export const XP_SPHERE_OTHER_KEY = "_other";
+function eachDayInRange(start: string, end: string): string[] {
+  const days: string[] = [];
+  const cursor = new Date(`${start}T12:00:00`);
+  const last = new Date(`${end}T12:00:00`);
+  while (cursor <= last) {
+    days.push(cursor.toISOString().slice(0, 10));
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return days;
+}
+
+export function xpByDayForWeek(
+  ledger: XpLedgerEntry[] | undefined,
+  cycleStartDate: string,
+  weekNumber: number
+): { date: string; xp: number }[] {
+  const { start, end } = weekDateRange(cycleStartDate, weekNumber);
+  const map = new Map<string, number>();
+  for (const day of eachDayInRange(start, end)) map.set(day, 0);
+  for (const e of ledger ?? []) {
+    const d = e.at.slice(0, 10);
+    if (!map.has(d)) continue;
+    map.set(d, (map.get(d) ?? 0) + e.amount);
+  }
+  return Array.from(map.entries()).map(([date, xp]) => ({ date, xp }));
+}
+
+export function xpBySourceBucketFromLedger(
+  ledger: XpLedgerEntry[] | undefined
+): { bucket: XpSourceBucket; xp: number; label: string }[] {
+  const totals: Record<XpSourceBucket, number> = {
+    tasks: 0,
+    week_close: 0,
+    ritual: 0,
+    quest: 0,
+    goal: 0,
+    other: 0,
+  };
+  for (const e of ledger ?? []) {
+    totals[classifyXpSource(e.sourceId)] += e.amount;
+  }
+  return (Object.keys(totals) as XpSourceBucket[])
+    .filter((b) => totals[b] > 0)
+    .map((bucket) => ({
+      bucket,
+      xp: totals[bucket],
+      label: xpSourceBucketLabel(bucket),
+    }))
+    .sort((a, b) => b.xp - a.xp);
+}
+
+export function xpByDayBySpheresForWeek(
+  ledger: XpLedgerEntry[] | undefined,
+  cycleStartDate: string,
+  weekNumber: number,
+  sphereIds: string[],
+  tasks: { id: string; sphereId: string }[],
+  goals: { id: string; sphereId: string }[]
+): XpDayBySphereRow[] {
+  const { start, end } = weekDateRange(cycleStartDate, weekNumber);
+  const rows: XpDayBySphereRow[] = [];
+  const byDate = new Map<string, XpDayBySphereRow>();
+
+  for (const date of eachDayInRange(start, end)) {
+    const row = { date } as XpDayBySphereRow;
+    for (const id of sphereIds) row[id] = 0;
+    row[XP_SPHERE_OTHER_KEY] = 0;
+    rows.push(row);
+    byDate.set(date, row);
+  }
+
+  for (const e of ledger ?? []) {
+    const d = e.at.slice(0, 10);
+    const row = byDate.get(d);
+    if (!row) continue;
+    const sphereId = xpEntrySphereId(e, tasks, goals);
+    if (sphereId && sphereIds.includes(sphereId)) {
+      row[sphereId] = (row[sphereId] ?? 0) + e.amount;
+    } else {
+      row[XP_SPHERE_OTHER_KEY] = (row[XP_SPHERE_OTHER_KEY] ?? 0) + e.amount;
+    }
+  }
+
+  return rows;
+}
 
 export function xpEntrySphereId(
   entry: XpLedgerEntry,
@@ -141,8 +227,6 @@ export function filterLedgerBySphere(
 ): XpLedgerEntry[] {
   return (ledger ?? []).filter((entry) => xpEntrySphereId(entry, tasks, goals) === sphereId);
 }
-
-export type XpDayBySphereRow = { date: string } & Record<string, number>;
 
 /** XP по дням с колонками на каждое направление (+ прочее без привязки к сфере). */
 export function xpByDayBySpheres(
@@ -178,6 +262,14 @@ export function xpByDayBySpheres(
   }
 
   return rows;
+}
+
+export function xpForWeek(
+  ledger: XpLedgerEntry[] | undefined,
+  cycleStartDate: string,
+  weekNumber: number
+): number {
+  return sumXp(filterLedgerByWeek(ledger, cycleStartDate, weekNumber));
 }
 
 export function xpLast7Days(ledger: XpLedgerEntry[] | undefined): number {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef } from "react";
+import { useCallback } from "react";
 import { Pencil } from "lucide-react";
 import { useAppStore } from "@/store/useAppStore";
 import { cn } from "@/lib/utils";
@@ -23,30 +23,27 @@ export function SphereTabFilter({
   allowEdit = true,
 }: TabProps) {
   const spheres = useAppStore((s) => s.spheres);
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const tabRefs = useRef(new Map<string, HTMLButtonElement>());
 
   const selectSphere = useCallback(
     (sphereId: string) => {
       onSelect(sphereId);
-      requestAnimationFrame(() => {
-        tabRefs.current.get(sphereId)?.scrollIntoView({
-          behavior: "smooth",
-          inline: "center",
-          block: "nearest",
-        });
-      });
     },
     [onSelect]
   );
 
   if (spheres.length === 0) return null;
 
+  const cols =
+    spheres.length <= 2
+      ? "grid-cols-2"
+      : spheres.length === 3
+        ? "grid-cols-3"
+        : "grid-cols-2 sm:grid-cols-3";
+
   return (
-    <div className={cn("no-print w-full max-w-lg", className)}>
+    <div className={cn("no-print w-full max-w-2xl", className)}>
       <div
-        ref={scrollRef}
-        className="flex gap-2 overflow-x-auto overscroll-x-contain pb-1 snap-x snap-mandatory [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className={cn("grid gap-1.5 sm:gap-2", cols)}
         role="tablist"
         aria-label={ariaLabel}
       >
@@ -57,7 +54,7 @@ export function SphereTabFilter({
             <div
               key={sphere.id}
               className={cn(
-                "relative flex shrink-0 snap-center items-stretch",
+                "relative flex min-w-0 items-stretch",
                 active && "overflow-hidden rounded-lg border border-opacity-90 bg-secondary dark:bg-black/45"
               )}
               style={
@@ -70,23 +67,24 @@ export function SphereTabFilter({
               }
             >
               <button
-                ref={(node) => {
-                  if (node) tabRefs.current.set(sphere.id, node);
-                  else tabRefs.current.delete(sphere.id);
-                }}
                 type="button"
                 role="tab"
                 aria-selected={active}
                 onClick={() => selectSphere(sphere.id)}
                 className={cn(
-                  "relative box-border flex min-h-[2.75rem] min-w-[8.5rem] max-w-[11rem] items-center justify-center gap-2 px-3 py-2 text-[10px] font-semibold uppercase leading-tight tracking-[0.08em] transition sm:min-h-[3rem] sm:px-4 sm:py-2.5 sm:text-xs sm:tracking-[0.12em]",
+                  "relative box-border flex min-h-[2.35rem] w-full min-w-0 items-center gap-1.5 px-2 py-1.5 text-[9px] font-semibold uppercase leading-tight tracking-[0.06em] transition sm:min-h-[2.5rem] sm:gap-2 sm:px-2.5 sm:text-[10px] sm:tracking-[0.08em]",
                   active
-                    ? "rounded-none border-0 bg-transparent pr-2 shadow-none"
+                    ? "rounded-none border-0 bg-transparent pr-1 shadow-none"
                     : "rounded-lg border border-border bg-card text-muted-foreground hover:border-foreground/20 hover:text-foreground dark:border-white/15 dark:bg-black/30 dark:text-white/55 dark:hover:border-white/25 dark:hover:text-white/80"
                 )}
                 style={active ? { color: sphere.color } : undefined}
               >
-                <SphereGlyph icon={sphere.icon} color={active ? sphere.color : "#71717a"} size="md" plain />
+                <SphereGlyph
+                  icon={sphere.icon}
+                  color={active ? sphere.color : "#71717a"}
+                  size="sm"
+                  plain
+                />
                 <span className="min-w-0 flex-1 truncate text-left">{sphere.name}</span>
               </button>
               {active && (
@@ -104,7 +102,7 @@ export function SphereTabFilter({
                     <button
                       type="button"
                       aria-label={`Редактировать: ${sphere.name}`}
-                      className="flex w-9 shrink-0 items-center justify-center border-l border-white/10 bg-black/25 text-white/80 transition hover:bg-black/40 hover:text-white dark:bg-black/40"
+                      className="flex w-7 shrink-0 items-center justify-center border-l border-white/10 bg-black/25 text-white/80 transition hover:bg-black/40 hover:text-white sm:w-8 dark:bg-black/40"
                       style={{ borderLeftColor: `${sphere.color}33` }}
                       onClick={(e) => e.stopPropagation()}
                     >

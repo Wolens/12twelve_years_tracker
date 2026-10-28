@@ -438,13 +438,12 @@ export function TowerBoard() {
         {here !== null && (
           <div
             className={cn(
-              "pointer-events-none absolute z-20 w-[3.5rem] origin-bottom overflow-visible",
+              "pointer-events-none absolute z-20 w-[3.5rem] origin-bottom overflow-visible max-sm:left-[31%] sm:left-[40%]",
               !climbing && "hero-bob",
               (canMove || climbing) && "tower-step"
             )}
             style={{
               top: heroTop,
-              left: "40%",
               height: "4.75rem",
               translate: "0 -100%",
               rotate: slumped ? "7deg" : undefined,
