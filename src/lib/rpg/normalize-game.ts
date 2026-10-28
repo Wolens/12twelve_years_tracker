@@ -46,12 +46,31 @@ export function normalizeCharacter(
       : [],
     race: normalizeRace(raw.race ?? base.race),
     coins: typeof raw.coins === "number" ? raw.coins : base.coins,
+    identitySetupDone: raw.identitySetupDone === true,
   };
   const withStarters = ensureStarterInventory(merged);
   if (!hasInventoryList) {
     return { ...withStarters, equipped: { ...(raw.equipped ?? {}) } };
   }
   return sanitizeEquipped(withStarters);
+}
+
+/** Старые сохранения до экрана «Твой герой» — не заставляем проходить его снова. */
+export function resolveLegacyCharacterIdentity(
+  character: CharacterState,
+  profile: { avatar?: string },
+  hasProgress: boolean
+): CharacterState {
+  if (character.identitySetupDone) return character;
+  if (!hasProgress) return character;
+  const gender =
+    character.gender ??
+    (profile.avatar === "👩" ? "female" : profile.avatar === "👨" ? "male" : "male");
+  return {
+    ...character,
+    gender,
+    identitySetupDone: true,
+  };
 }
 
 export function normalizeSeasonFlame(

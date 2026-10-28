@@ -11,12 +11,19 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useAppStore } from "@/store/useAppStore";
-import { normalizeCharacter } from "@/lib/rpg/normalize-game";
+import { normalizeCharacter, resolveLegacyCharacterIdentity } from "@/lib/rpg/normalize-game";
+import { hasUserProgress } from "@/lib/app-state-health";
 import type { CharacterGender } from "@/types/rpg";
 import { cn } from "@/lib/utils";
 
 export function CharacterSetupDialog() {
-  const done = normalizeCharacter(useAppStore((s) => s.character)).identitySetupDone;
+  const done = useAppStore((s) =>
+    resolveLegacyCharacterIdentity(
+      normalizeCharacter(s.character),
+      s.profile,
+      hasUserProgress(s)
+    ).identitySetupDone
+  );
   const setupIdentity = useAppStore((s) => s.setupCharacterIdentity);
   const [gender, setGender] = useState<CharacterGender>("male");
   const [birthDate, setBirthDate] = useState("");

@@ -6,8 +6,9 @@ import { normalizeActiveWeek } from "./active-week";
 import { syncProfileAchievements } from "./achievements";
 import { migrateProfileXp } from "./xp-ledger";
 import { preserveSphereIcon } from "./sphere-icons";
-import { normalizeCharacter, normalizeSeasonFlame } from "./rpg/normalize-game";
+import { normalizeCharacter, normalizeSeasonFlame, resolveLegacyCharacterIdentity } from "./rpg/normalize-game";
 import { resolveSphereFilterId } from "./sphere-filter-default";
+import { hasUserProgress } from "./app-state-health";
 
 type LegacyGoal = Goal & {
   week?: number;
@@ -141,10 +142,22 @@ export function migrateAppState(
     icon: preserveSphereIcon(s.icon),
   }));
 
-  const character = normalizeCharacter(base.character);
-  const seasonFlame = normalizeSeasonFlame(base.seasonFlame);
-
   const goalsV11 = (base.version ?? 0) < 11 ? [] : goals;
+
+  const character = resolveLegacyCharacterIdentity(
+    normalizeCharacter(base.character),
+    profile,
+    hasUserProgress({
+      ...base,
+      goals: goalsV11,
+      cycleTasks,
+      weeks,
+      profile,
+      spheres,
+      onboardingComplete: base.onboardingComplete ?? false,
+    } as AppState)
+  );
+  const seasonFlame = normalizeSeasonFlame(base.seasonFlame);
 
   const weekFilterSphereId = resolveSphereFilterId(
     spheres,

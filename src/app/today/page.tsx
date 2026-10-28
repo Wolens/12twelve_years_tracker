@@ -162,7 +162,9 @@ export default function TodayPage() {
         ))}
       </div>
 
-      <SphereWeekFilter className="mx-auto" />
+      <div className="flex justify-center">
+        <SphereWeekFilter className="w-full" />
+      </div>
 
       <div className="space-y-4">
           <div

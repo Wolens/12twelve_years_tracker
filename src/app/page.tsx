@@ -69,7 +69,7 @@ export default function DashboardPage() {
       />
 
       <div className="flex justify-center px-4">
-        <SphereWeekFilter />
+        <SphereWeekFilter className="w-full" />
       </div>
 
       <WeekDetail week={detailWeek} />

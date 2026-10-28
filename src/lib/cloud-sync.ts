@@ -2,6 +2,28 @@ import type { AppState } from "@/types";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { useAppStore } from "@/store/useAppStore";
 import { appStateRichness, hasUserProgress, repairAppState } from "@/lib/app-state-health";
+import { normalizeCharacter } from "@/lib/rpg/normalize-game";
+
+function mergeCharacterIdentity(local: AppState, remote: AppState): AppState["character"] {
+  const localChar = normalizeCharacter(local.character);
+  const remoteChar = normalizeCharacter(remote.character);
+  if (localChar.identitySetupDone && !remoteChar.identitySetupDone) {
+    return {
+      ...remoteChar,
+      gender: localChar.gender ?? remoteChar.gender,
+      birthDate: localChar.birthDate ?? remoteChar.birthDate,
+      identitySetupDone: true,
+    };
+  }
+  return remoteChar.identitySetupDone ? remoteChar : localChar;
+}
+
+function mergePreferringIdentity(local: AppState, remote: AppState): AppState {
+  return {
+    ...remote,
+    character: mergeCharacterIdentity(local, remote),
+  };
+}
 
 export function isAppStateEmpty(state: AppState | null | undefined): boolean {
   if (!state) return true;
@@ -61,13 +83,13 @@ export async function hydrateAppStateFromCloud(userId: string): Promise<void> {
   const localScore = appStateRichness(local);
 
   if (remote && remoteScore >= localScore && !isAppStateEmpty(remote)) {
-    useAppStore.getState().importState(remote);
+    useAppStore.getState().importState(mergePreferringIdentity(local, remote));
     return;
   }
 
   if (localAppStateHasData(local)) {
     if (remote && remoteScore > localScore) {
-      useAppStore.getState().importState(remote);
+      useAppStore.getState().importState(mergePreferringIdentity(local, remote));
       return;
     }
     await saveCloudAppState(userId, local);
@@ -87,7 +109,7 @@ export async function saveCloudAppStateSafe(
   const repaired = repairAppState(state);
   const remote = await fetchCloudAppState(userId);
   if (remote && appStateRichness(remote) > appStateRichness(repaired) + 5) {
-    useAppStore.getState().importState(remote);
+    useAppStore.getState().importState(mergePreferringIdentity(repaired, remote));
     return;
   }
   await saveCloudAppState(userId, repaired);
