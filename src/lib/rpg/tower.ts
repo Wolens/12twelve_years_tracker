@@ -115,6 +115,21 @@ export function buildTower(input: {
   return { weeks, days };
 }
 
+/** Этаж под ногами героя: последний обжитый до сегодня или сегодня после ритуала. */
+export function heroStandDay(
+  days: TowerDay[],
+  todayDay: number | null,
+  openedToday: boolean
+): number | null {
+  if (todayDay === null || todayDay < 1) return null;
+  if (openedToday) return todayDay;
+  for (let d = todayDay - 1; d >= 1; d--) {
+    const state = days[d - 1]?.state;
+    if (state === "done" || state === "visited") return d;
+  }
+  return 1;
+}
+
 /** Пролёт наверх из этой недели сложен, если неделю закрыли. Первая неделя стоит на фундаменте. */
 export function passageBuilt(week: number, closed: boolean[]) {
   if (week <= 1) return true;

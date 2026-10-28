@@ -27,7 +27,9 @@ export function cycleTasksCompletedToday(ledger: XpLedgerEntry[] | undefined): n
 }
 
 export function ritualClaimedToday(profile: Profile): boolean {
-  return profile.lastRitualDate === todayISO();
+  const today = todayISO();
+  if (profile.lastRitualDate === today) return true;
+  return (profile.xpLedger ?? []).some((e) => e.sourceId === xpSourceDailyRitual(today));
 }
 
 export function dailyQuestClaimedToday(profile: Profile): boolean {

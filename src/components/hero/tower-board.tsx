@@ -6,7 +6,7 @@ import { useAppStore } from "@/store/useAppStore";
 import { todayISO } from "@/lib/gamification";
 import { CYCLE_DAYS, todayIndex } from "@/lib/rpg/day-route";
 import { ritualClaimedToday } from "@/lib/daily-engagement";
-import { buildTower, passageBuilt, stateLine, type TowerDay } from "@/lib/rpg/tower";
+import { buildTower, heroStandDay, passageBuilt, stateLine, type TowerDay } from "@/lib/rpg/tower";
 import { FLAME_CRITICAL } from "@/lib/rpg/season-flame";
 import { CharacterFlat } from "./character-flat";
 import { FloorChestDialog } from "./floor-chest-dialog";
@@ -217,12 +217,13 @@ export function TowerBoard() {
   const slumped = vitality < 85 && !opened;
   const weather = !opened && vitality < 96;
   const dayNumber = index < 0 ? 0 : Math.min(CYCLE_DAYS, index + 1);
-  const standDay = todayDay === null ? null : opened ? todayDay : Math.max(1, todayDay - 1);
+  const standDay = heroStandDay(tower.days, todayDay, opened);
 
   useEffect(() => {
     if (todayDay === null || climbing) return;
-    setHeroDay(opened ? todayDay : Math.max(1, todayDay - 1));
-  }, [todayDay, opened, climbing]);
+    const day = heroStandDay(tower.days, todayDay, opened);
+    if (day !== null) setHeroDay(day);
+  }, [todayDay, opened, climbing, tower.days]);
 
   useEffect(() => {
     if (here === null || opened || promptedOpen.current) return;
@@ -305,7 +306,7 @@ export function TowerBoard() {
 
   const openFocused = () => {
     if (!focus || todayDay === null || focus.state !== "today" || opened) return;
-    const from = Math.max(1, todayDay - 1);
+    const from = heroStandDay(tower.days, todayDay, false) ?? 1;
     setPicked(null);
     setClimbing(true);
     setHeroDay(from);
@@ -315,6 +316,10 @@ export function TowerBoard() {
     });
     window.setTimeout(() => {
       setClimbing(false);
+      const profileNow = useAppStore.getState().profile;
+      const openedNow = ritualClaimedToday(profileNow);
+      const settled = heroStandDay(tower.days, todayDay, openedNow) ?? todayDay;
+      setHeroDay(settled);
       if (amount > 0) toast({ title: `+${amount} XP · этаж открыт` });
     }, 420);
   };
