@@ -149,9 +149,16 @@ export function repairAppState(state: AppState): AppState {
     };
   }
 
+  const resolvedWeekFilter = resolveSphereFilterId(next.spheres, next.weekFilterSphereId);
+  const resolvedGoalsFilter = resolveSphereFilterId(next.spheres, next.goalsFilterSphereId);
+
   return {
     ...next,
-    weekFilterSphereId: resolveSphereFilterId(next.spheres, next.weekFilterSphereId),
-    goalsFilterSphereId: resolveSphereFilterId(next.spheres, next.goalsFilterSphereId),
+    weekFilterSphereId:
+      next.weekFilterSphereId === resolvedWeekFilter ? next.weekFilterSphereId : resolvedWeekFilter,
+    goalsFilterSphereId:
+      next.goalsFilterSphereId === resolvedGoalsFilter
+        ? next.goalsFilterSphereId
+        : resolvedGoalsFilter,
   };
 }

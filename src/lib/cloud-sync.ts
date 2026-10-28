@@ -2,6 +2,7 @@ import type { AppState } from "@/types";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { useAppStore } from "@/store/useAppStore";
 import { appStateRichness, hasUserProgress, repairAppState } from "@/lib/app-state-health";
+import { resolveSphereFilterId } from "@/lib/sphere-filter-default";
 import { normalizeCharacter } from "@/lib/rpg/normalize-game";
 
 function mergeCharacterIdentity(local: AppState, remote: AppState): AppState["character"] {
@@ -18,10 +19,21 @@ function mergeCharacterIdentity(local: AppState, remote: AppState): AppState["ch
   return remoteChar.identitySetupDone ? remoteChar : localChar;
 }
 
-function mergePreferringIdentity(local: AppState, remote: AppState): AppState {
-  return {
+function mergePreferringIdentity(
+  local: AppState,
+  remote: AppState,
+  opts?: { preferLocalUi?: boolean }
+): AppState {
+  const merged: AppState = {
     ...remote,
     character: mergeCharacterIdentity(local, remote),
+  };
+  if (!opts?.preferLocalUi) return merged;
+  return {
+    ...merged,
+    weekFilterSphereId: resolveSphereFilterId(local.spheres, local.weekFilterSphereId),
+    goalsFilterSphereId: resolveSphereFilterId(local.spheres, local.goalsFilterSphereId),
+    theme: local.theme,
   };
 }
 
@@ -109,7 +121,9 @@ export async function saveCloudAppStateSafe(
   const repaired = repairAppState(state);
   const remote = await fetchCloudAppState(userId);
   if (remote && appStateRichness(remote) > appStateRichness(repaired) + 5) {
-    useAppStore.getState().importState(mergePreferringIdentity(repaired, remote));
+    useAppStore.getState().importState(
+      mergePreferringIdentity(repaired, remote, { preferLocalUi: true })
+    );
     return;
   }
   await saveCloudAppState(userId, repaired);

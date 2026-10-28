@@ -78,17 +78,20 @@ export function buildTower(input: {
     const weekday = (index % 7) + 1;
     const lit = marked.has(date);
     const visited = ritual.has(date);
+    const ids = goalsForDay(input.assignments, week, weekday);
+    const tasksDone = ids.filter((id) => taskById.get(id)?.done).length;
+    const tasksTotal = ids.length;
+    const worked = lit || tasksDone > 0;
+
     let state: DayState;
     if (date > input.today) state = "future";
     else if (date === input.today) state = "today";
-    else if (lit) state = "done";
+    else if (worked) state = "done";
     else if (visited) state = "visited";
     else state = "missed";
 
     if (state === "done") trail += 1;
 
-    const ids = goalsForDay(input.assignments, week, weekday);
-    const tasksDone = ids.filter((id) => taskById.get(id)?.done).length;
     const healthDelta =
       state === "missed" ? -FLAME_DECAY_PER_MISSED_DAY : visited ? FLAME_RITUAL_GAIN : undefined;
 
@@ -97,10 +100,10 @@ export function buildTower(input: {
       date,
       week,
       state,
-      lit,
+      lit: worked,
       healthDelta,
       tasksDone,
-      tasksTotal: ids.length,
+      tasksTotal,
       trail,
       floorType: floorTypeForDay(index + 1),
     });
@@ -115,19 +118,10 @@ export function buildTower(input: {
   return { weeks, days };
 }
 
-/** Этаж под ногами героя: последний обжитый до сегодня или сегодня после ритуала. */
-export function heroStandDay(
-  days: TowerDay[],
-  todayDay: number | null,
-  openedToday: boolean
-): number | null {
+/** Герой на этаже календарного дня цикла (1–84), время идёт вверх независимо от ритуала. */
+export function heroStandDay(todayDay: number | null): number | null {
   if (todayDay === null || todayDay < 1) return null;
-  if (openedToday) return todayDay;
-  for (let d = todayDay - 1; d >= 1; d--) {
-    const state = days[d - 1]?.state;
-    if (state === "done" || state === "visited") return d;
-  }
-  return 1;
+  return todayDay;
 }
 
 /** Пролёт наверх из этой недели сложен, если неделю закрыли. Первая неделя стоит на фундаменте. */

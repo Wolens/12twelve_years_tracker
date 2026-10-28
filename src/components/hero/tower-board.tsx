@@ -217,13 +217,13 @@ export function TowerBoard() {
   const slumped = vitality < 85 && !opened;
   const weather = !opened && vitality < 96;
   const dayNumber = index < 0 ? 0 : Math.min(CYCLE_DAYS, index + 1);
-  const standDay = heroStandDay(tower.days, todayDay, opened);
+  const standDay = heroStandDay(todayDay);
 
   useEffect(() => {
     if (todayDay === null || climbing) return;
-    const day = heroStandDay(tower.days, todayDay, opened);
+    const day = heroStandDay(todayDay);
     if (day !== null) setHeroDay(day);
-  }, [todayDay, opened, climbing, tower.days]);
+  }, [todayDay, climbing]);
 
   useEffect(() => {
     if (here === null || opened || promptedOpen.current) return;
@@ -306,7 +306,7 @@ export function TowerBoard() {
 
   const openFocused = () => {
     if (!focus || todayDay === null || focus.state !== "today" || opened) return;
-    const from = heroStandDay(tower.days, todayDay, false) ?? 1;
+    const from = Math.max(1, todayDay - 1);
     setPicked(null);
     setClimbing(true);
     setHeroDay(from);
@@ -316,10 +316,7 @@ export function TowerBoard() {
     });
     window.setTimeout(() => {
       setClimbing(false);
-      const profileNow = useAppStore.getState().profile;
-      const openedNow = ritualClaimedToday(profileNow);
-      const settled = heroStandDay(tower.days, todayDay, openedNow) ?? todayDay;
-      setHeroDay(settled);
+      setHeroDay(todayDay);
       if (amount > 0) toast({ title: `+${amount} XP · этаж открыт` });
     }, 420);
   };
