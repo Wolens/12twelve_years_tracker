@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { useAppStore } from "@/store/useAppStore";
 import { computeCycleOverview, weekStatsRows } from "@/lib/stats/cycle-overview";
@@ -12,7 +12,10 @@ import {
   sumXp,
   filterLedgerSince,
   filterLedgerBySphere,
+  xpByDayBySpheres,
+  XP_SPHERE_OTHER_KEY,
 } from "@/lib/stats/xp-activity";
+import type { XpChartSeries } from "@/components/stats/stats-xp-chart";
 import { sphereTaskStats } from "@/lib/stats/sphere-task-stats";
 import { StatsHeroSummary } from "@/components/stats/stats-hero-summary";
 import { StatsWeekGrid } from "@/components/stats/stats-week-grid";
@@ -49,7 +52,12 @@ export default function StatsPage() {
   const goals = useAppStore((s) => s.goals);
 
   const [filterSphere, setFilterSphere] = useState<string>("all");
+  const [chartBySphere, setChartBySphere] = useState(false);
   const [taskWeekScope, setTaskWeekScope] = useState<"all" | "active">("all");
+
+  useEffect(() => {
+    if (filterSphere !== "all") setChartBySphere(false);
+  }, [filterSphere]);
 
   const visibleSpheres = useMemo(
     () => spheres.filter((s) => !hiddenSphereIds.includes(s.id)),
@@ -73,6 +81,30 @@ export default function StatsPage() {
   }, [ledger, filterSphere, cycleTasks, goals]);
   const xp7d = useMemo(() => xpLast7Days(ledger), [ledger]);
   const xpDaily = useMemo(() => xpByDay(activityLedger, XP_CHART_DAYS), [activityLedger]);
+  const xpDailyBySphere = useMemo(() => {
+    if (filterSphere !== "all" || !chartBySphere) return null;
+    return xpByDayBySpheres(
+      ledger,
+      XP_CHART_DAYS,
+      visibleSpheres.map((s) => s.id),
+      cycleTasks,
+      goals
+    );
+  }, [ledger, filterSphere, chartBySphere, visibleSpheres, cycleTasks, goals]);
+
+  const chartSeries = useMemo((): XpChartSeries[] | undefined => {
+    if (!chartBySphere || filterSphere !== "all") return undefined;
+    const rows = xpDailyBySphere ?? [];
+    const series: XpChartSeries[] = visibleSpheres.map((s) => ({
+      id: s.id,
+      name: s.name,
+      color: s.color,
+    }));
+    if (rows.some((r) => Number(r[XP_SPHERE_OTHER_KEY] ?? 0) > 0)) {
+      series.push({ id: XP_SPHERE_OTHER_KEY, name: "Прочее", color: "#94a3b8" });
+    }
+    return series;
+  }, [chartBySphere, filterSphere, visibleSpheres, xpDailyBySphere]);
   const xpSources = useMemo(
     () => xpBySourceBucket(activityLedger, XP_SOURCE_DAYS),
     [activityLedger]
@@ -195,13 +227,35 @@ export default function StatsPage() {
       </div>
 
       <div className="game-surface space-y-4 p-4">
-        <h2 className="font-display text-lg font-semibold">Активность</h2>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="font-display text-lg font-semibold">Активность</h2>
+          {filterSphere === "all" && visibleSpheres.length > 0 && (
+            <button
+              type="button"
+              aria-pressed={chartBySphere}
+              onClick={() => setChartBySphere((v) => !v)}
+              className={cn(
+                "rounded-lg border px-3 py-1.5 text-xs font-medium transition",
+                chartBySphere
+                  ? "border-primary/50 bg-primary/10 text-primary"
+                  : "border-white/10 text-muted-foreground hover:text-foreground"
+              )}
+            >
+              По направлениям
+            </button>
+          )}
+        </div>
         <p className="text-xs text-muted-foreground">
           {filterSphere === "all"
-            ? `Здоровье сейчас: ${Math.round(seasonFlame?.value ?? 100)}%`
+            ? chartBySphere
+              ? "Опыт по направлениям за 14 дней (ритуал и закрытие недели — в «Прочее»)"
+              : `Здоровье сейчас: ${Math.round(seasonFlame?.value ?? 100)}%`
             : `Только направление «${spheres.find((s) => s.id === filterSphere)?.name ?? ""}»`}
         </p>
-        <StatsXpChart data={xpDaily} />
+        <StatsXpChart
+          data={chartBySphere && xpDailyBySphere ? xpDailyBySphere : xpDaily}
+          series={chartSeries}
+        />
         <div>
           <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
             Источники XP · {XP_SOURCE_DAYS} дн.

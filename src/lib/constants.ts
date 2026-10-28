@@ -23,88 +23,106 @@ export const DAILY_QUEST_TASKS = 3;
 
 export const MAX_LEVEL = 100;
 
+export type AchievementIconName =
+  | "sunrise"
+  | "calendar-check"
+  | "list-todo"
+  | "milestone"
+  | "layers"
+  | "flag"
+  | "radar"
+  | "coins"
+  | "package-open"
+  | "mask"
+  | "zap"
+  | "shield"
+  | "book-open"
+  | "compass"
+  | "hexagon"
+  | "mountain";
+
 export const ACHIEVEMENTS_META: Record<
   string,
-  { title: string; description: string; emoji: string }
+  { title: string; description: string; icon: AchievementIconName }
 > = {
   floor_opened: {
     title: "Этаж открыт",
     description: "Первый раз открыл этаж в башне",
-    emoji: "🚪",
+    icon: "sunrise",
   },
   ritual_7: {
     title: "Неделя в башне",
     description: "7 разных дней с открытым этажом",
-    emoji: "🗼",
+    icon: "calendar-check",
   },
   first_goal_done: {
     title: "Первая задача",
     description: "Отмечена первая задача недели",
-    emoji: "✅",
+    icon: "list-todo",
   },
   first_week_closed: {
     title: "Первая неделя",
     description: "Неделя закрыта и бонус получен",
-    emoji: "📅",
+    icon: "milestone",
   },
   week_perfect_3: {
     title: "Три подряд",
     description: "Три недели закрыты подряд",
-    emoji: "🔗",
+    icon: "layers",
   },
   cycle_complete: {
     title: "12 недель",
     description: "Все 12 недель цикла закрыты",
-    emoji: "🎉",
+    icon: "flag",
   },
   all_sphere_goals: {
     title: "Направление закрыто",
     description: "Все задачи одного направления выполнены",
-    emoji: "💎",
+    icon: "radar",
   },
   first_purchase: {
     title: "Первая покупка",
     description: "Куплена вещь в магазине",
-    emoji: "🪙",
+    icon: "coins",
   },
   chest_opened: {
     title: "Сундук",
     description: "Открыт сундук этажа или уровня",
-    emoji: "🎁",
+    icon: "package-open",
   },
   race_chosen: {
     title: "Облик",
     description: "Выбран облик героя вместо человека",
-    emoji: "🧙",
+    icon: "mask",
   },
   streak_7: {
     title: "Огонёк 7",
     description: "7 дней подряд с активностью",
-    emoji: "🔥",
+    icon: "zap",
   },
   streak_30: {
     title: "Несгораемый",
     description: "30 дней подряд с активностью",
-    emoji: "💥",
+    icon: "shield",
   },
   level_10: {
     title: "Ученик",
     description: "Достигнут 10 уровень",
-    emoji: "⭐",
+    icon: "book-open",
   },
   level_25: {
     title: "Практик",
     description: "Достигнут 25 уровень",
-    emoji: "🌟",
+    icon: "compass",
   },
   level_50: {
     title: "Мастер",
     description: "Достигнут 50 уровень",
-    emoji: "🏆",
+    icon: "hexagon",
   },
   level_100: {
     title: "Легенда",
     description: "Максимальный уровень",
-    emoji: "👑",
+    icon: "mountain",
   },
 };

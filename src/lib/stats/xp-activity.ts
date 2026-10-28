@@ -110,21 +110,74 @@ export function xpForWeek(
   );
 }
 
+export const XP_SPHERE_OTHER_KEY = "_other";
+
+export function xpEntrySphereId(
+  entry: XpLedgerEntry,
+  tasks: { id: string; sphereId: string }[],
+  goals: { id: string; sphereId: string }[]
+): string | null {
+  const sourceId = entry.sourceId ?? "";
+  if (sourceId.startsWith("cycle_task:")) {
+    const id = sourceId.slice("cycle_task:".length);
+    return tasks.find((t) => t.id === id)?.sphereId ?? null;
+  }
+  if (sourceId.startsWith("onetime_goal:")) {
+    const id = sourceId.slice("onetime_goal:".length);
+    return goals.find((g) => g.id === id)?.sphereId ?? null;
+  }
+  if (sourceId.startsWith("goal_complete:")) {
+    const id = sourceId.slice("goal_complete:".length);
+    return goals.find((g) => g.id === id)?.sphereId ?? null;
+  }
+  return null;
+}
+
 export function filterLedgerBySphere(
   ledger: XpLedgerEntry[] | undefined,
   sphereId: string,
   tasks: { id: string; sphereId: string }[],
   goals: { id: string; sphereId: string }[]
 ): XpLedgerEntry[] {
-  const taskIds = new Set(tasks.filter((t) => t.sphereId === sphereId).map((t) => t.id));
-  const goalIds = new Set(goals.filter((g) => g.sphereId === sphereId).map((g) => g.id));
-  return (ledger ?? []).filter((entry) => {
-    const sourceId = entry.sourceId ?? "";
-    if (sourceId.startsWith("cycle_task:")) return taskIds.has(sourceId.slice("cycle_task:".length));
-    if (sourceId.startsWith("onetime_goal:")) return goalIds.has(sourceId.slice("onetime_goal:".length));
-    if (sourceId.startsWith("goal_complete:")) return goalIds.has(sourceId.slice("goal_complete:".length));
-    return false;
-  });
+  return (ledger ?? []).filter((entry) => xpEntrySphereId(entry, tasks, goals) === sphereId);
+}
+
+export type XpDayBySphereRow = { date: string } & Record<string, number>;
+
+/** XP по дням с колонками на каждое направление (+ прочее без привязки к сфере). */
+export function xpByDayBySpheres(
+  ledger: XpLedgerEntry[] | undefined,
+  days: number,
+  sphereIds: string[],
+  tasks: { id: string; sphereId: string }[],
+  goals: { id: string; sphereId: string }[]
+): XpDayBySphereRow[] {
+  const filtered = filterLedgerSince(ledger, days);
+  const rows: XpDayBySphereRow[] = [];
+  const byDate = new Map<string, XpDayBySphereRow>();
+
+  for (let i = days - 1; i >= 0; i--) {
+    const date = daysAgoISO(i);
+    const row = { date } as XpDayBySphereRow;
+    for (const id of sphereIds) row[id] = 0;
+    row[XP_SPHERE_OTHER_KEY] = 0;
+    rows.push(row);
+    byDate.set(date, row);
+  }
+
+  for (const e of filtered) {
+    const d = e.at.slice(0, 10);
+    const row = byDate.get(d);
+    if (!row) continue;
+    const sphereId = xpEntrySphereId(e, tasks, goals);
+    if (sphereId && sphereIds.includes(sphereId)) {
+      row[sphereId] = (row[sphereId] ?? 0) + e.amount;
+    } else {
+      row[XP_SPHERE_OTHER_KEY] = (row[XP_SPHERE_OTHER_KEY] ?? 0) + e.amount;
+    }
+  }
+
+  return rows;
 }
 
 export function xpLast7Days(ledger: XpLedgerEntry[] | undefined): number {

@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { xpProgressInLevel, rankTitle } from "@/lib/gamification";
 import { ACHIEVEMENTS_META } from "@/lib/constants";
+import { AchievementIcon } from "@/components/profile/achievement-icon";
 import type { AchievementId } from "@/types";
 import { AuthPanel } from "@/components/profile/auth-panel";
 import { XpHistoryTrigger } from "@/components/profile/xp-history-trigger";
@@ -65,6 +66,7 @@ export default function ProfilePage() {
         <CardContent className="grid grid-cols-2 gap-3">
           {allAchievements.map((id) => {
             const meta = ACHIEVEMENTS_META[id];
+            if (!meta) return null;
             const unlocked = profile.achievements.includes(id);
             return (
               <div
@@ -75,7 +77,7 @@ export default function ProfilePage() {
                     : "border-white/5 opacity-40 grayscale"
                 }`}
               >
-                <span className="text-2xl">{meta.emoji}</span>
+                <AchievementIcon id={id} unlocked={unlocked} />
                 <p className="mt-1 text-xs font-medium">{meta.title}</p>
                 <p className="text-[10px] text-muted-foreground">{meta.description}</p>
               </div>
