@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { resolveLucideSphereIcon, resolveSphereIconDisplay } from "@/lib/sphere-icons";
+import { SphereIconVisual } from "./sphere-icon-visual";
 
 type Size = "xs" | "sm" | "md" | "lg";
 
@@ -41,18 +41,17 @@ export function SphereGlyph({
   className,
   plain = false,
 }: Props) {
-  const Lucide = resolveLucideSphereIcon(icon);
   const px = ICON_PX[size];
   const stroke = STROKE[size];
 
   if (plain) {
     return (
-      <Lucide
-        className={cn("shrink-0", className)}
-        size={px}
-        strokeWidth={stroke}
-        style={{ color }}
-        aria-hidden
+      <SphereIconVisual
+        icon={icon}
+        color={color}
+        px={px}
+        stroke={stroke}
+        className={className}
       />
     );
   }
@@ -71,7 +70,7 @@ export function SphereGlyph({
       }}
       aria-hidden
     >
-      <Lucide size={px} strokeWidth={stroke} />
+      <SphereIconVisual icon={icon} color={color} px={px} stroke={stroke} />
     </span>
   );
 }

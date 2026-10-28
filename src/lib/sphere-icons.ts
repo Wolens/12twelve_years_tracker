@@ -79,6 +79,23 @@ export function isPresetSphereIcon(icon: string): icon is Exclude<SphereIconKey,
   return icon in SPHERE_ICONS && icon !== "custom";
 }
 
+export function isKnownSphereIconKey(icon: string): boolean {
+  return (
+    icon === "restored" ||
+    icon === "custom" ||
+    isPresetSphereIcon(icon) ||
+    isExtraSphereIcon(icon)
+  );
+}
+
+/** Сохранённый unicode-emoji (не ключ Lucide). */
+export function isStoredSphereEmoji(icon: string): boolean {
+  if (!icon || isKnownSphereIconKey(icon)) return false;
+  if (EMOJI_TO_PRESET[icon] || LEGACY_EMOJI_TO_EXTRA[icon]) return false;
+  if (/^[a-z0-9_-]+$/i.test(icon)) return false;
+  return icon.length <= 8;
+}
+
 export function normalizeSphereIcon(icon: string): SphereIconKey {
   if (isPresetSphereIcon(icon)) return icon;
   if (isExtraSphereIcon(icon)) return "custom";
@@ -102,6 +119,7 @@ export function resolveLucideSphereIcon(icon: string): LucideIcon {
 export function resolveExtraSphereIconKey(icon: string): string {
   if (icon === "restored") return icon;
   if (isExtraSphereIcon(icon)) return icon;
+  if (isStoredSphereEmoji(icon)) return icon;
   if (icon === "custom") return DEFAULT_EXTRA_SPHERE_ICON;
   if (LEGACY_EMOJI_TO_EXTRA[icon]) {
     const mapped = LEGACY_EMOJI_TO_EXTRA[icon];
@@ -141,6 +159,7 @@ export function preserveSphereIcon(icon: string): string {
   const extraEmoji = LEGACY_EMOJI_TO_EXTRA[icon];
   if (extraEmoji) return extraEmoji;
   if (icon === "custom") return DEFAULT_EXTRA_SPHERE_ICON;
+  if (isStoredSphereEmoji(icon)) return icon;
   return DEFAULT_EXTRA_SPHERE_ICON;
 }
 

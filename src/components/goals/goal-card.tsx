@@ -21,6 +21,7 @@ import {
 import { CounterChart } from "@/components/charts/counter-chart";
 import { MetricChart } from "@/components/charts/metric-chart";
 import { MetricMeasurementsDialog } from "@/components/goals/metric-measurements-dialog";
+import { SphereGlyph } from "@/components/spheres/sphere-glyph";
 import { useAppStore } from "@/store/useAppStore";
 
 export function GoalCard({
@@ -167,7 +168,9 @@ export function GoalCard({
         <CardHeader className="pb-2">
           <div className="flex items-start justify-between gap-2">
             <div>
-              <span className="text-lg">{sphere?.icon}</span>
+              {sphere && (
+                <SphereGlyph icon={sphere.icon} color={sphere.color} size="sm" />
+              )}
               <CardTitle className="mt-1 text-lg">{goal.title}</CardTitle>
               <p className="text-xs text-muted-foreground">{sphere?.name}</p>
             </div>

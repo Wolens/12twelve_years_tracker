@@ -4,6 +4,13 @@ const nextConfig = {
   experimental: {
     optimizePackageImports: ["lucide-react", "recharts", "framer-motion"],
   },
+  webpack: (config, { dev }) => {
+    if (dev) {
+      // Меньше «битого» webpack-кэша после частых правок на Windows.
+      config.cache = false;
+    }
+    return config;
+  },
 };
 
 export default nextConfig;

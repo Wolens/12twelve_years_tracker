@@ -9,10 +9,10 @@ import {
   SPHERE_ICON_LABELS,
   isExtraSphereIcon,
   isPresetSphereIcon,
+  isStoredSphereEmoji,
   resolveExtraSphereIconKey,
-  resolveLucideSphereIcon,
 } from "@/lib/sphere-icons";
-import { DEFAULT_EXTRA_SPHERE_ICON } from "@/lib/sphere-extra-icons";
+import { SphereIconVisual } from "./sphere-icon-visual";
 import { SphereExtraIconPickerDialog } from "./sphere-extra-icon-picker-dialog";
 
 type Props = {
@@ -24,7 +24,6 @@ type Props = {
 };
 
 function PreviewIcon({ icon, color, size = "md" }: { icon: string; color: string; size?: "sm" | "md" }) {
-  const Lucide = resolveLucideSphereIcon(icon);
   const box = size === "sm" ? "h-10 w-10 rounded-xl" : "h-11 w-11 rounded-xl";
   const px = size === "sm" ? 18 : 20;
   return (
@@ -36,16 +35,21 @@ function PreviewIcon({ icon, color, size = "md" }: { icon: string; color: string
         boxShadow: `inset 0 0 0 1px ${color}33`,
       }}
     >
-      <Lucide size={px} strokeWidth={2} />
+      <SphereIconVisual icon={icon} color={color} px={px} stroke={2} />
     </span>
   );
 }
 
 export function SphereIconPicker({ value, color, onChange, emojiOnly }: Props) {
   const [pickerOpen, setPickerOpen] = useState(false);
-  const extraKey = resolveExtraSphereIconKey(value);
+  const displayIcon = resolveExtraSphereIconKey(value);
   const presetActive = isPresetSphereIcon(value);
-  const extraActive = emojiOnly || isExtraSphereIcon(value) || value === "custom";
+  const customSignActive =
+    emojiOnly ||
+    isExtraSphereIcon(value) ||
+    isStoredSphereEmoji(value) ||
+    value === "custom";
+  const dialogValue = isExtraSphereIcon(value) ? value : "";
 
   if (emojiOnly) {
     return (
@@ -56,7 +60,7 @@ export function SphereIconPicker({ value, color, onChange, emojiOnly }: Props) {
           className="flex w-full items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-left transition-colors hover:bg-white/10"
           style={{ boxShadow: `0 0 0 1px ${color}33` }}
         >
-          <PreviewIcon icon={extraKey} color={color} />
+          <PreviewIcon icon={displayIcon} color={color} />
           <span className="min-w-0 flex-1">
             <span className="block text-sm font-medium">Знак</span>
             <span className="text-xs text-muted-foreground">Открыть список иконок</span>
@@ -66,7 +70,7 @@ export function SphereIconPicker({ value, color, onChange, emojiOnly }: Props) {
         <SphereExtraIconPickerDialog
           open={pickerOpen}
           onOpenChange={setPickerOpen}
-          value={extraKey}
+          value={dialogValue}
           color={color}
           onSelect={onChange}
         />
@@ -111,26 +115,25 @@ export function SphereIconPicker({ value, color, onChange, emojiOnly }: Props) {
         </p>
         <button
           type="button"
-          onClick={() => {
-            if (!extraActive) onChange(DEFAULT_EXTRA_SPHERE_ICON);
-            setPickerOpen(true);
-          }}
+          onClick={() => setPickerOpen(true)}
           className={cn(
             "flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition-all",
-            extraActive && !presetActive
+            customSignActive && !presetActive
               ? "border-white/20 bg-white/10"
               : "border-white/5 bg-transparent opacity-80 hover:opacity-100"
           )}
           style={
-            extraActive && !presetActive
+            customSignActive && !presetActive
               ? { boxShadow: `0 0 0 1px ${color}55`, backgroundColor: `${color}0c` }
               : undefined
           }
         >
-          <PreviewIcon icon={extraKey} color={color} size="sm" />
+          <PreviewIcon icon={displayIcon} color={color} size="sm" />
           <span className="min-w-0 flex-1">
             <span className="block text-sm font-medium">Свой знак</span>
-            <span className="text-xs text-muted-foreground">Ещё иконки в том же стиле</span>
+            <span className="text-xs text-muted-foreground">
+              Иконки из списка — такие же, как в интерфейсе
+            </span>
           </span>
           <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
         </button>
@@ -139,7 +142,7 @@ export function SphereIconPicker({ value, color, onChange, emojiOnly }: Props) {
       <SphereExtraIconPickerDialog
         open={pickerOpen}
         onOpenChange={setPickerOpen}
-        value={extraKey}
+        value={dialogValue}
         color={color}
         onSelect={onChange}
       />

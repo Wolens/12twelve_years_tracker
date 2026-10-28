@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import { Inter, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import { AppProviders } from "@/components/providers/app-providers";
@@ -32,6 +33,9 @@ export default function RootLayout({
   return (
     <html lang="ru" className="dark">
       <body className={`${inter.variable} ${space.variable} font-sans`}>
+        {process.env.NODE_ENV === "development" && (
+          <Script src="/chunk-recovery.js" strategy="beforeInteractive" />
+        )}
         <AppProviders>
           <HideNetlifyBadge />
           <AppShell>{children}</AppShell>

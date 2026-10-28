@@ -21,6 +21,7 @@ import {
 import { useAppStore } from "@/store/useAppStore";
 import type { Goal, GoalType } from "@/types";
 import { Plus } from "lucide-react";
+import { SphereGlyph } from "@/components/spheres/sphere-glyph";
 
 type Props = {
   editGoal?: Goal;
@@ -157,7 +158,10 @@ export function GoalFormDialog({
                 <SelectContent>
                   {spheres.map((s) => (
                     <SelectItem key={s.id} value={s.id}>
-                      {s.icon} {s.name}
+                      <span className="flex items-center gap-2">
+                        <SphereGlyph icon={s.icon} color={s.color} size="xs" plain />
+                        {s.name}
+                      </span>
                     </SelectItem>
                   ))}
                 </SelectContent>

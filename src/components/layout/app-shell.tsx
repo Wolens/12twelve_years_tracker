@@ -40,7 +40,7 @@ function useHydrated() {
   return ready;
 }
 
-function BootSplash() {
+function BootSplash({ stalled }: { stalled?: boolean }) {
   return (
     <div
       className="boot-splash flex min-h-dvh flex-col items-center justify-center gap-3 bg-[#0a0a0f] text-zinc-400"
@@ -54,6 +54,13 @@ function BootSplash() {
     >
       <div className="h-8 w-8 animate-pulse rounded-full border-2 border-emerald-500/40 border-t-emerald-400" />
       <p className="text-sm text-zinc-400">Загрузка…</p>
+      {stalled && (
+        <p className="max-w-xs px-4 text-center text-xs text-zinc-500">
+          Дольше обычного? После правок в dev нажми{" "}
+          <strong className="text-zinc-400">Ctrl+Shift+R</strong> или перезапусти{" "}
+          <code className="text-violet-300/90">npm run dev:clean</code>
+        </p>
+      )}
     </div>
   );
 }
@@ -68,9 +75,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const isOnboarding = pathname === "/onboarding";
   const [navPending, setNavPendingHref] = useState<string | null>(null);
   const [forceBoot, setForceBoot] = useState(false);
+  const [splashStalled, setSplashStalled] = useState(false);
 
   useEffect(() => {
     const t = window.setTimeout(() => setForceBoot(true), BOOT_FORCE_SHOW_MS);
+    return () => window.clearTimeout(t);
+  }, []);
+
+  useEffect(() => {
+    const t = window.setTimeout(() => setSplashStalled(true), 5000);
     return () => window.clearTimeout(t);
   }, []);
 
@@ -113,7 +126,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const booting = !forceBoot && (!ready || !authInitialized);
 
   if (booting) {
-    return <BootSplash />;
+    return <BootSplash stalled={splashStalled} />;
   }
 
   return (
