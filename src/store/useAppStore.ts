@@ -1027,9 +1027,22 @@ export const useAppStore = create<Store>()(
         })),
 
       importState: (data) => {
+        const prev = get();
         const migrated = migrateAppState({ ...createInitialState(), ...data });
         const repaired = repairAppState(migrated);
-        set({ ...repaired, levelUpEvent: null });
+        const spheres = repaired.spheres;
+        set({
+          ...repaired,
+          levelUpEvent: null,
+          weekFilterSphereId: resolveSphereFilterId(
+            spheres,
+            prev.weekFilterSphereId || repaired.weekFilterSphereId
+          ),
+          goalsFilterSphereId: resolveSphereFilterId(
+            spheres,
+            prev.goalsFilterSphereId || repaired.goalsFilterSphereId
+          ),
+        });
       },
 
       exportState: () => {
@@ -1093,7 +1106,19 @@ export const useAppStore = create<Store>()(
           ...createInitialState(),
           ...(persisted as AppState),
         });
-        return { ...current, ...migrated };
+        const spheres = migrated.spheres?.length ? migrated.spheres : current.spheres;
+        return {
+          ...current,
+          ...migrated,
+          weekFilterSphereId: resolveSphereFilterId(
+            spheres,
+            current.weekFilterSphereId || migrated.weekFilterSphereId
+          ),
+          goalsFilterSphereId: resolveSphereFilterId(
+            spheres,
+            current.goalsFilterSphereId || migrated.goalsFilterSphereId
+          ),
+        };
       },
       partialize: (state) => ({
         version: state.version,

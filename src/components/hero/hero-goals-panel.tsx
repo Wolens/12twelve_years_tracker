@@ -4,14 +4,12 @@ import { memo, useEffect, useState } from "react";
 import { useAppStore } from "@/store/useAppStore";
 import { SphereGoalsFilter } from "@/components/spheres/sphere-week-filter";
 import { SphereAddDialog } from "@/components/spheres/sphere-add-dialog";
-import { SphereEditDialog } from "@/components/spheres/sphere-edit-dialog";
 import { SphereGlyph } from "@/components/spheres/sphere-glyph";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { formatMetricNumber, parseOptionalMetricNumber } from "@/lib/sphere-metrics";
-import { Pencil } from "lucide-react";
 
 export const HeroGoalsPanel = memo(function HeroGoalsPanel() {
   const spheres = useAppStore((s) => s.spheres);
@@ -89,20 +87,9 @@ export const HeroGoalsPanel = memo(function HeroGoalsPanel() {
           className="space-y-4 rounded-xl border border-white/10 bg-card/25 p-4"
           style={{ borderTopColor: sphere.color, borderTopWidth: 3 }}
         >
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex min-w-0 items-center gap-2">
-              <SphereGlyph icon={sphere.icon} color={sphere.color} size="sm" />
-              <p className="truncate font-medium">{sphere.name}</p>
-            </div>
-            <SphereEditDialog
-              sphere={sphere}
-              allowDelete
-              trigger={
-                <Button type="button" size="icon" variant="ghost" className="h-8 w-8 shrink-0">
-                  <Pencil className="h-4 w-4" />
-                </Button>
-              }
-            />
+          <div className="flex items-center gap-2">
+            <SphereGlyph icon={sphere.icon} color={sphere.color} size="sm" />
+            <p className="truncate font-medium">{sphere.name}</p>
           </div>
 
           <div className="space-y-3">

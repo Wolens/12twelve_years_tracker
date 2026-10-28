@@ -1,67 +1,122 @@
 "use client";
 
+import { useCallback, useRef } from "react";
+import { Pencil } from "lucide-react";
 import { useAppStore } from "@/store/useAppStore";
 import { cn } from "@/lib/utils";
 import { SphereGlyph } from "./sphere-glyph";
+import { SphereEditDialog } from "./sphere-edit-dialog";
 
 type TabProps = {
   activeId: string;
   onSelect: (sphereId: string) => void;
   ariaLabel: string;
   className?: string;
+  allowEdit?: boolean;
 };
 
-export function SphereTabFilter({ activeId, onSelect, ariaLabel, className }: TabProps) {
+export function SphereTabFilter({
+  activeId,
+  onSelect,
+  ariaLabel,
+  className,
+  allowEdit = true,
+}: TabProps) {
   const spheres = useAppStore((s) => s.spheres);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const tabRefs = useRef(new Map<string, HTMLButtonElement>());
+
+  const selectSphere = useCallback(
+    (sphereId: string) => {
+      onSelect(sphereId);
+      requestAnimationFrame(() => {
+        tabRefs.current.get(sphereId)?.scrollIntoView({
+          behavior: "smooth",
+          inline: "center",
+          block: "nearest",
+        });
+      });
+    },
+    [onSelect]
+  );
 
   if (spheres.length === 0) return null;
 
   return (
-    <div
-      className={cn(
-        "no-print flex w-full max-w-lg flex-wrap justify-center gap-2 px-0 sm:gap-2.5",
-        className
-      )}
-      role="tablist"
-      aria-label={ariaLabel}
-    >
-      {spheres.map((sphere) => {
-        const active = activeId === sphere.id;
-        return (
-          <button
-            key={sphere.id}
-            type="button"
-            role="tab"
-            aria-selected={active}
-            onClick={() => onSelect(sphere.id)}
-            className={cn(
-              "relative box-border flex min-h-[2.75rem] w-[calc(50%-0.25rem)] max-w-[calc(50%-0.25rem)] min-w-0 items-center justify-center gap-2 rounded-lg border px-2.5 py-2 text-[10px] font-semibold uppercase leading-tight tracking-[0.08em] transition sm:min-h-[3rem] sm:w-auto sm:max-w-[11rem] sm:flex-none sm:px-4 sm:py-2.5 sm:text-xs sm:tracking-[0.14em]",
-              active
-                ? "border-opacity-90 bg-secondary dark:bg-black/45"
-                : "border-border bg-card text-muted-foreground hover:border-foreground/20 hover:text-foreground dark:border-white/15 dark:bg-black/30 dark:text-white/55 dark:hover:border-white/25 dark:hover:text-white/80"
-            )}
-            style={
-              active
-                ? {
-                    borderColor: sphere.color,
-                    color: sphere.color,
-                    boxShadow: `0 0 20px ${sphere.color}40, inset 0 0 14px ${sphere.color}20`,
+    <div className={cn("no-print w-full max-w-lg", className)}>
+      <div
+        ref={scrollRef}
+        className="flex gap-2 overflow-x-auto overscroll-x-contain pb-1 snap-x snap-mandatory [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        role="tablist"
+        aria-label={ariaLabel}
+      >
+        {spheres.map((sphere) => {
+          const active = activeId === sphere.id;
+
+          return (
+            <div
+              key={sphere.id}
+              className={cn(
+                "relative flex shrink-0 snap-center items-stretch",
+                active && "overflow-hidden rounded-lg border border-opacity-90 bg-secondary dark:bg-black/45"
+              )}
+              style={
+                active
+                  ? {
+                      borderColor: sphere.color,
+                      boxShadow: `0 0 20px ${sphere.color}40, inset 0 0 14px ${sphere.color}20`,
+                    }
+                  : undefined
+              }
+            >
+              <button
+                ref={(node) => {
+                  if (node) tabRefs.current.set(sphere.id, node);
+                  else tabRefs.current.delete(sphere.id);
+                }}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                onClick={() => selectSphere(sphere.id)}
+                className={cn(
+                  "relative box-border flex min-h-[2.75rem] min-w-[8.5rem] max-w-[11rem] items-center justify-center gap-2 px-3 py-2 text-[10px] font-semibold uppercase leading-tight tracking-[0.08em] transition sm:min-h-[3rem] sm:px-4 sm:py-2.5 sm:text-xs sm:tracking-[0.12em]",
+                  active
+                    ? "rounded-none border-0 bg-transparent pr-2 shadow-none"
+                    : "rounded-lg border border-border bg-card text-muted-foreground hover:border-foreground/20 hover:text-foreground dark:border-white/15 dark:bg-black/30 dark:text-white/55 dark:hover:border-white/25 dark:hover:text-white/80"
+                )}
+                style={active ? { color: sphere.color } : undefined}
+              >
+                <SphereGlyph icon={sphere.icon} color={active ? sphere.color : "#71717a"} size="md" plain />
+                <span className="min-w-0 flex-1 truncate text-left">{sphere.name}</span>
+              </button>
+              {active && (
+                <span
+                  className="pointer-events-none absolute -right-0.5 -top-0.5 z-10 h-2.5 w-2.5 rounded-full"
+                  style={{ backgroundColor: sphere.color, boxShadow: `0 0 8px ${sphere.color}` }}
+                  aria-hidden
+                />
+              )}
+              {allowEdit && active && (
+                <SphereEditDialog
+                  sphere={sphere}
+                  allowDelete
+                  trigger={
+                    <button
+                      type="button"
+                      aria-label={`Редактировать: ${sphere.name}`}
+                      className="flex w-9 shrink-0 items-center justify-center border-l border-white/10 bg-black/25 text-white/80 transition hover:bg-black/40 hover:text-white dark:bg-black/40"
+                      style={{ borderLeftColor: `${sphere.color}33` }}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
                   }
-                : undefined
-            }
-          >
-            <SphereGlyph icon={sphere.icon} color={active ? sphere.color : "#71717a"} size="md" plain />
-            <span className="min-w-0 text-balance">{sphere.name}</span>
-            {active && (
-              <span
-                className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full"
-                style={{ backgroundColor: sphere.color, boxShadow: `0 0 8px ${sphere.color}` }}
-                aria-hidden
-              />
-            )}
-          </button>
-        );
-      })}
+                />
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -73,7 +128,7 @@ export function SphereWeekFilter({ className }: { className?: string }) {
     <SphereTabFilter
       activeId={activeId}
       onSelect={setActive}
-      ariaLabel="Цели недели"
+      ariaLabel="Направления · 12 недель"
       className={className}
     />
   );
@@ -86,7 +141,7 @@ export function SphereGoalsFilter({ className }: { className?: string }) {
     <SphereTabFilter
       activeId={activeId}
       onSelect={setActive}
-      ariaLabel="Цели на 12 недель"
+      ariaLabel="Направления · цели на 12 недель"
       className={className}
     />
   );

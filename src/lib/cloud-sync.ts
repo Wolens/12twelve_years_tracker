@@ -60,16 +60,29 @@ function mergePreferringIdentity(
   remote: AppState,
   opts?: { preferLocalUi?: boolean }
 ): AppState {
+  const spheres = remote.spheres?.length ? remote.spheres : local.spheres;
   const merged: AppState = {
     ...remote,
+    spheres,
     character: mergeCharacterIdentity(local, remote),
     profile: mergeProfiles(local.profile, remote.profile),
+    weekFilterSphereId: resolveSphereFilterId(
+      spheres,
+      local.weekFilterSphereId || remote.weekFilterSphereId
+    ),
+    goalsFilterSphereId: resolveSphereFilterId(
+      spheres,
+      local.goalsFilterSphereId || remote.goalsFilterSphereId
+    ),
   };
   if (!opts?.preferLocalUi) return merged;
   return {
     ...merged,
-    weekFilterSphereId: resolveSphereFilterId(local.spheres, local.weekFilterSphereId),
-    goalsFilterSphereId: resolveSphereFilterId(local.spheres, local.goalsFilterSphereId),
+    weekFilterSphereId: resolveSphereFilterId(spheres, local.weekFilterSphereId || merged.weekFilterSphereId),
+    goalsFilterSphereId: resolveSphereFilterId(
+      spheres,
+      local.goalsFilterSphereId || merged.goalsFilterSphereId
+    ),
     theme: local.theme,
     activeWeek: local.activeWeek,
     activeDay: local.activeDay,

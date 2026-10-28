@@ -66,7 +66,7 @@ export function SphereEditDialog({ sphere, trigger, allowDelete }: Props) {
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Редактировать сферу</DialogTitle>
+          <DialogTitle>Редактировать направление</DialogTitle>
         </DialogHeader>
         <form
           className="space-y-4"
