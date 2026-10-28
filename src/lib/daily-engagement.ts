@@ -26,10 +26,23 @@ export function cycleTasksCompletedToday(ledger: XpLedgerEntry[] | undefined): n
   ).length;
 }
 
+function localDateOf(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso.slice(0, 10);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
 export function ritualClaimedToday(profile: Profile): boolean {
   const today = todayISO();
   if (profile.lastRitualDate === today) return true;
-  return (profile.xpLedger ?? []).some((e) => e.sourceId === xpSourceDailyRitual(today));
+  return (profile.xpLedger ?? []).some((e) => {
+    if (!e.sourceId?.startsWith("daily_ritual:")) return false;
+    if (e.sourceId === xpSourceDailyRitual(today)) return true;
+    return localDateOf(e.at) === today;
+  });
 }
 
 export function dailyQuestClaimedToday(profile: Profile): boolean {

@@ -62,6 +62,8 @@ function ledgerMarks(ledger: XpLedgerEntry[]) {
 export function buildTower(input: {
   start: string;
   today: string;
+  /** Этаж, на котором герой. Он и есть «сегодня» в башне. */
+  currentDay: number | null;
   ledger: XpLedgerEntry[];
   closed: boolean[];
   assignments: DayAssignments;
@@ -82,10 +84,14 @@ export function buildTower(input: {
     const tasksDone = ids.filter((id) => taskById.get(id)?.done).length;
     const tasksTotal = ids.length;
     const worked = lit || tasksDone > 0;
+    const dayNumber = index + 1;
+    const current = input.currentDay;
 
     let state: DayState;
-    if (date > input.today) state = "future";
-    else if (date === input.today) state = "today";
+    if (current !== null && dayNumber > current) state = "future";
+    else if (current !== null && dayNumber === current) state = "today";
+    else if (current === null && date > input.today) state = "future";
+    else if (current === null && date === input.today) state = "today";
     else if (worked) state = "done";
     else if (visited) state = "visited";
     else state = "missed";
@@ -118,28 +124,28 @@ export function buildTower(input: {
   return { weeks, days };
 }
 
-/** Верхняя граница этажа: рабочая неделя и «коридор» после последней закрытой с бонусом. */
-export function heroProgressCap(
-  weeks: { number: number; bonusAwarded?: boolean }[],
-  activeWeek: number
-): number {
-  let lastBonus = 0;
-  for (const w of weeks) {
-    if (w.bonusAwarded && w.number > lastBonus) lastBonus = w.number;
-  }
-  const afterClosed = Math.min(CYCLE_DAYS, (lastBonus + 1) * 7);
-  const activeCap = Math.min(CYCLE_DAYS, Math.min(12, Math.max(1, activeWeek)) * 7);
-  return Math.min(afterClosed, activeCap);
+/** Последний этаж рабочей недели. */
+export function heroProgressCap(activeWeek: number): number {
+  const week = Math.min(12, Math.max(1, activeWeek));
+  return Math.min(CYCLE_DAYS, week * 7);
 }
 
-/** Герой: календарный день, но не выше прогресса по неделям. */
+/**
+ * Герой всегда на рабочей неделе (activeWeek), не на уже пройденной.
+ * Календарь двигает его вперёд только до конца этой недели.
+ */
 export function heroStandDay(
   todayDay: number | null,
   activeWeek: number,
-  weeks: { number: number; bonusAwarded?: boolean }[]
+  activeDay: number
 ): number | null {
-  if (todayDay === null || todayDay < 1) return null;
-  return Math.min(todayDay, heroProgressCap(weeks, activeWeek));
+  const week = Math.min(12, Math.max(1, activeWeek));
+  const dayInWeek = Math.min(7, Math.max(1, activeDay));
+  const minFloor = (week - 1) * 7 + 1;
+  const weekFloor = minFloor + dayInWeek - 1;
+  const cap = heroProgressCap(week);
+  const calendar = todayDay != null && todayDay >= 1 ? todayDay : minFloor;
+  return Math.min(cap, Math.max(minFloor, weekFloor, Math.min(calendar, cap)));
 }
 
 /** Пролёт наверх из этой недели сложен, если неделю закрыли. Первая неделя стоит на фундаменте. */

@@ -198,6 +198,7 @@ export function TowerBoard() {
   const scrolled = useRef(false);
   const columnRef = useRef<HTMLDivElement>(null);
   const activeWeek = useAppStore((s) => s.activeWeek);
+  const activeDay = useAppStore((s) => s.activeDay);
   const claimedFloorChests = useAppStore((s) => s.character.claimedFloorChests ?? EMPTY_CHESTS);
   const todayDay = here === null ? null : here + 1;
   const [range, setRange] = useState(() => windowAround(todayDay));
@@ -212,56 +213,56 @@ export function TowerBoard() {
     [weeks]
   );
 
+  const standDay = heroStandDay(todayDay, activeWeek, activeDay);
+
   const tower = useMemo(
-    () => buildTower({ start, today, ledger, closed, assignments, tasks }),
-    [start, today, ledger, closed, assignments, tasks]
+    () => buildTower({ start, today, currentDay: standDay, ledger, closed, assignments, tasks }),
+    [start, today, standDay, ledger, closed, assignments, tasks]
   );
 
   const progress = here === null ? 0 : here / (CYCLE_DAYS - 1);
   const slumped = vitality < 85 && !opened;
   const weather = !opened && vitality < 96;
   const dayNumber = index < 0 ? 0 : Math.min(CYCLE_DAYS, index + 1);
-  const standDay = heroStandDay(todayDay, activeWeek, weeks);
 
   useEffect(() => {
-    if (todayDay === null || climbing) return;
-    const day = heroStandDay(todayDay, activeWeek, weeks);
-    if (day !== null) setHeroDay(day);
-  }, [todayDay, activeWeek, weeks, climbing]);
+    if (standDay === null || climbing) return;
+    setHeroDay(standDay);
+  }, [standDay, climbing]);
 
   useEffect(() => {
-    if (here === null || opened || promptedOpen.current) return;
+    if (standDay === null || opened || promptedOpen.current) return;
     promptedOpen.current = true;
-    setPicked(here + 1);
-  }, [here, opened]);
+    setPicked(standDay);
+  }, [standDay, opened]);
 
   useLayoutEffect(() => {
-    if (scrolled.current || here === null) return;
+    if (scrolled.current || standDay === null) return;
     const column = columnRef.current;
     if (!column || column.getClientRects().length === 0) return;
     scrolled.current = true;
-    scrollTowerToDay(column, here + 1);
+    scrollTowerToDay(column, standDay);
     const next = measureWindow(column);
     if (next) {
       rangeRef.current = next;
       setRange(next);
     }
-  }, [here]);
+  }, [standDay]);
 
   useEffect(() => {
-    if (here === null) return;
+    if (standDay === null) return;
     const column = columnRef.current;
     if (!column) return;
     const id = requestAnimationFrame(() => {
       if (column.getClientRects().length === 0) return;
       if (!scrolled.current) {
         scrolled.current = true;
-        scrollTowerToDay(column, here + 1);
+        scrollTowerToDay(column, standDay);
       }
       setCanMove(true);
     });
     return () => cancelAnimationFrame(id);
-  }, [here]);
+  }, [standDay]);
 
   useEffect(() => {
     const column = columnRef.current;
@@ -306,22 +307,22 @@ export function TowerBoard() {
   }, []);
 
   const focus = picked === null ? null : tower.days[picked - 1];
-  const canOpen = focus?.state === "today" && !opened;
+  const canOpen = standDay !== null && focus?.day === standDay && !opened;
 
   const openFocused = () => {
-    if (!focus || todayDay === null || focus.state !== "today" || opened) return;
-    const settled = heroStandDay(todayDay, activeWeek, weeks) ?? todayDay;
-    const from = Math.max(1, settled - 1);
+    if (!focus || standDay === null || focus.day !== standDay) return;
+    if (ritualClaimedToday(useAppStore.getState().profile)) return;
+    const from = Math.max(1, standDay - 1);
     setPicked(null);
     setClimbing(true);
     setHeroDay(from);
     const amount = claimDailyRitual();
     requestAnimationFrame(() => {
-      requestAnimationFrame(() => setHeroDay(settled));
+      requestAnimationFrame(() => setHeroDay(standDay));
     });
     window.setTimeout(() => {
       setClimbing(false);
-      setHeroDay(heroStandDay(todayDay, activeWeek, weeks) ?? todayDay);
+      setHeroDay(standDay);
       if (amount > 0) toast({ title: `+${amount} XP · этаж открыт` });
     }, 420);
   };

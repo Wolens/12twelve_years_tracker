@@ -300,13 +300,16 @@ export const useAppStore = create<Store>()(
 
       claimDailyRitual: () => {
         const today = todayISO();
-        if (ritualClaimedToday(get().profile)) return 0;
+        const state = get();
+        if (ritualClaimedToday(state.profile)) return 0;
+        const sourceId = xpSourceDailyRitual(today);
+        if ((state.profile.xpLedger ?? []).some((e) => e.sourceId === sourceId)) return 0;
         const amount = randomRitualXp();
         set((s) => {
           const { profile, levelUp } = grantXp(s.profile, {
             baseAmount: amount,
             label: "Ритуал: открыт день",
-            sourceId: xpSourceDailyRitual(today),
+            sourceId,
             withStreak: true,
           });
           return {

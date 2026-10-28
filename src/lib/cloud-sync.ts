@@ -1,9 +1,10 @@
-import type { AppState } from "@/types";
+import type { AppState, Profile, XpLedgerEntry } from "@/types";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { useAppStore } from "@/store/useAppStore";
 import { appStateRichness, hasUserProgress, repairAppState } from "@/lib/app-state-health";
 import { resolveSphereFilterId } from "@/lib/sphere-filter-default";
 import { normalizeCharacter } from "@/lib/rpg/normalize-game";
+import { syncProfileFromLedger } from "@/lib/xp-ledger";
 
 function mergeCharacterIdentity(local: AppState, remote: AppState): AppState["character"] {
   const localChar = normalizeCharacter(local.character);
@@ -19,6 +20,38 @@ function mergeCharacterIdentity(local: AppState, remote: AppState): AppState["ch
   return remoteChar.identitySetupDone ? remoteChar : localChar;
 }
 
+function mergeLedger(local: XpLedgerEntry[], remote: XpLedgerEntry[]): XpLedgerEntry[] {
+  const byKey = new Map<string, XpLedgerEntry>();
+  for (const entry of remote) byKey.set(entry.sourceId || entry.id, entry);
+  for (const entry of local) {
+    const key = entry.sourceId || entry.id;
+    if (!byKey.has(key)) byKey.set(key, entry);
+  }
+  return Array.from(byKey.values());
+}
+
+function mergeProfiles(local: Profile, remote: Profile): Profile {
+  const lastRitualDate = [local.lastRitualDate, remote.lastRitualDate]
+    .filter((d): d is string => Boolean(d))
+    .sort()
+    .at(-1) ?? null;
+  const lastActivityDate = [local.lastActivityDate, remote.lastActivityDate]
+    .filter((d): d is string => Boolean(d))
+    .sort()
+    .at(-1) ?? null;
+  return syncProfileFromLedger({
+    ...remote,
+    streak: Math.max(local.streak ?? 0, remote.streak ?? 0),
+    lastActivityDate,
+    lastRitualDate,
+    dailyQuestClaimDate: [local.dailyQuestClaimDate, remote.dailyQuestClaimDate]
+      .filter((d): d is string => Boolean(d))
+      .sort()
+      .at(-1) ?? null,
+    xpLedger: mergeLedger(local.xpLedger ?? [], remote.xpLedger ?? []),
+  });
+}
+
 function mergePreferringIdentity(
   local: AppState,
   remote: AppState,
@@ -27,6 +60,7 @@ function mergePreferringIdentity(
   const merged: AppState = {
     ...remote,
     character: mergeCharacterIdentity(local, remote),
+    profile: mergeProfiles(local.profile, remote.profile),
   };
   if (!opts?.preferLocalUi) return merged;
   return {
