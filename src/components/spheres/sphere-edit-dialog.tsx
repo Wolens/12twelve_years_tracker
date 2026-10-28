@@ -16,27 +16,30 @@ import { useAppStore } from "@/store/useAppStore";
 import { cn } from "@/lib/utils";
 import { Pencil } from "lucide-react";
 import { SphereIconPicker } from "./sphere-icon-picker";
-import type { SphereIconKey } from "@/lib/sphere-icons";
-import { normalizeSphereIcon } from "@/lib/sphere-icons";
+import { preserveSphereIcon } from "@/lib/sphere-icons";
 
-const COLORS = ["#34d399", "#a78bfa", "#f472b6", "#fbbf24", "#60a5fa", "#fb7185", "#4ade80", "#38bdf8"];
+import { SPHERE_COLORS } from "@/lib/sphere-colors";
+
+const COLORS = [...SPHERE_COLORS];
 
 type Props = {
   sphere: Sphere;
   trigger?: React.ReactNode;
+  allowDelete?: boolean;
 };
 
-export function SphereEditDialog({ sphere, trigger }: Props) {
+export function SphereEditDialog({ sphere, trigger, allowDelete }: Props) {
   const updateSphere = useAppStore((s) => s.updateSphere);
+  const deleteSphere = useAppStore((s) => s.deleteSphere);
   const [open, setOpen] = useState(false);
   const [name, setName] = useState(sphere.name);
-  const [icon, setIcon] = useState<SphereIconKey>(normalizeSphereIcon(sphere.icon));
+  const [icon, setIcon] = useState(() => preserveSphereIcon(sphere.icon));
   const [color, setColor] = useState(sphere.color);
 
   useEffect(() => {
     if (open) {
       setName(sphere.name);
-      setIcon(normalizeSphereIcon(sphere.icon));
+      setIcon(preserveSphereIcon(sphere.icon));
       setColor(sphere.color);
     }
   }, [open, sphere]);
@@ -98,6 +101,26 @@ export function SphereEditDialog({ sphere, trigger }: Props) {
             </div>
           </div>
           <Button type="submit" className="w-full">Сохранить</Button>
+          {allowDelete && (
+            <Button
+              type="button"
+              variant="destructive"
+              className="w-full"
+              onClick={() => {
+                if (
+                  !confirm(
+                    `Удалить сферу «${sphere.name}»? Все цели и задачи в ней тоже удалятся.`
+                  )
+                ) {
+                  return;
+                }
+                deleteSphere(sphere.id);
+                setOpen(false);
+              }}
+            >
+              Удалить сферу
+            </Button>
+          )}
         </form>
       </DialogContent>
     </Dialog>

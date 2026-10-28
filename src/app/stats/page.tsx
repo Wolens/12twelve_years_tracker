@@ -1,8 +1,24 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import { useAppStore } from "@/store/useAppStore";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { computeCycleOverview, weekStatsRows } from "@/lib/stats/cycle-overview";
+import {
+  xpByDay,
+  xpBySourceBucket,
+  xpForWeek,
+  xpLast7Days,
+  sumXp,
+  filterLedgerSince,
+} from "@/lib/stats/xp-activity";
+import { sphereTaskStats } from "@/lib/stats/sphere-task-stats";
+import { StatsHeroSummary } from "@/components/stats/stats-hero-summary";
+import { StatsWeekGrid } from "@/components/stats/stats-week-grid";
+import { StatsSphereCard } from "@/components/stats/stats-sphere-card";
+import { StatsXpSources } from "@/components/stats/stats-xp-sources";
+import { StatsLegacyGoalsSection } from "@/components/stats/stats-legacy-goals";
+import { SphereGlyph } from "@/components/spheres/sphere-glyph";
 import {
   Select,
   SelectContent,
@@ -10,176 +26,183 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CounterChart } from "@/components/charts/counter-chart";
-import { MetricChart } from "@/components/charts/metric-chart";
-import { CycleRadial } from "@/components/stats/cycle-radial";
-import {
-  counterPercent,
-  metricProgressPercent,
-  isGoalComplete,
-  onetimeStats,
-} from "@/lib/goals";
-import { Flame } from "lucide-react";
-import { SphereGlyph } from "@/components/spheres/sphere-glyph";
-import { filterGoalsByVisibleSpheres } from "@/lib/sphere-filters";
+import { cn } from "@/lib/utils";
+
+const StatsXpChart = dynamic(
+  () => import("@/components/stats/stats-xp-chart").then((m) => m.StatsXpChart),
+  { ssr: false, loading: () => <div className="h-[200px]" /> }
+);
+
+const XP_CHART_DAYS = 14;
+const XP_SOURCE_DAYS = 28;
 
 export default function StatsPage() {
-  const goals = useAppStore((s) => s.goals);
+  const cycleTasks = useAppStore((s) => s.cycleTasks);
   const spheres = useAppStore((s) => s.spheres);
   const hiddenSphereIds = useAppStore((s) => s.hiddenSphereIds);
   const weeks = useAppStore((s) => s.weeks);
   const profile = useAppStore((s) => s.profile);
-  const [filterSphere, setFilterSphere] = useState("all");
-  const [filterGoal, setFilterGoal] = useState("all");
+  const activeWeek = useAppStore((s) => s.activeWeek);
+  const cycleStartDate = useAppStore((s) => s.cycleStartDate);
+  const seasonFlame = useAppStore((s) => s.seasonFlame);
 
-  const visibleGoals = filterGoalsByVisibleSpheres(goals, hiddenSphereIds);
+  const [filterSphere, setFilterSphere] = useState<string>("all");
+  const [taskWeekScope, setTaskWeekScope] = useState<"all" | "active">("all");
 
-  const filteredGoals = useMemo(() => {
-    let list = visibleGoals;
-    if (filterSphere !== "all") list = list.filter((g) => g.sphereId === filterSphere);
-    if (filterGoal !== "all") list = list.filter((g) => g.id === filterGoal);
-    return list;
-  }, [visibleGoals, filterSphere, filterGoal]);
-
-  const trackable = visibleGoals.filter(
-    (g) => g.type === "counter" || g.type === "metric"
+  const visibleSpheres = useMemo(
+    () => spheres.filter((s) => !hiddenSphereIds.includes(s.id)),
+    [spheres, hiddenSphereIds]
   );
 
-  const cyclePercent = useMemo(() => {
-    if (trackable.length === 0) return 0;
-    const sum = trackable.reduce((acc, g) => {
-      if (g.type === "counter") return acc + counterPercent(g);
-      return acc + metricProgressPercent(g);
-    }, 0);
-    return sum / trackable.length;
-  }, [trackable]);
+  const overview = useMemo(
+    () => computeCycleOverview(cycleTasks, weeks, activeWeek),
+    [cycleTasks, weeks, activeWeek]
+  );
 
-  const onetime = onetimeStats(visibleGoals);
+  const weekRows = useMemo(
+    () => weekStatsRows(cycleTasks, weeks),
+    [cycleTasks, weeks]
+  );
 
-  const sphereStats = spheres
-    .filter((s) => !hiddenSphereIds.includes(s.id))
-    .map((s) => {
-      const sg = visibleGoals.filter((g) => g.sphereId === s.id);
-      const done = sg.filter(isGoalComplete).length;
-      const track = sg.filter((g) => g.type !== "onetime");
-      const avg =
-        track.length === 0
-          ? 0
-          : track.reduce(
-              (a, g) =>
-                a +
-                (g.type === "counter"
-                  ? counterPercent(g)
-                  : metricProgressPercent(g)),
-              0
-            ) / track.length;
-      const ot = onetimeStats(sg);
-      return { sphere: s, total: sg.length, done, avg, onetime: ot };
-    });
+  const ledger = profile.xpLedger;
+  const xp7d = useMemo(() => xpLast7Days(ledger), [ledger]);
+  const xpDaily = useMemo(() => xpByDay(ledger, XP_CHART_DAYS), [ledger]);
+  const xpSources = useMemo(
+    () => xpBySourceBucket(ledger, XP_SOURCE_DAYS),
+    [ledger]
+  );
+  const xpSourceTotal = useMemo(
+    () => sumXp(filterLedgerSince(ledger, XP_SOURCE_DAYS)),
+    [ledger]
+  );
 
-  const closedWeeks = weeks.filter((w) => w.closed).length;
-  const chartGoals = filteredGoals.filter((g) => g.type !== "onetime");
+  const weekXpFn = useMemo(
+    () => (week: number) => xpForWeek(ledger, cycleStartDate, week),
+    [ledger, cycleStartDate]
+  );
+
+  const taskWeekFilter = taskWeekScope === "active" ? activeWeek : undefined;
+  const weekScopeLabel =
+    taskWeekScope === "active" ? `неделя ${activeWeek}` : "весь цикл";
+
+  const spheresToShow =
+    filterSphere === "all"
+      ? visibleSpheres
+      : visibleSpheres.filter((s) => s.id === filterSphere);
 
   return (
-    <div className="space-y-4 px-4 pt-4 pb-8">
+    <div className="space-y-4 px-4 pt-4 pb-8" data-tour="stats-board">
       <h1 className="font-display text-2xl font-bold">Статистика</h1>
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Прогресс цикла</CardTitle>
-        </CardHeader>
-        <CardContent className="relative">
-          <CycleRadial percent={cyclePercent} />
-          <p className="absolute inset-0 flex items-center justify-center text-2xl font-bold">
-            {Math.round(cyclePercent)}%
-          </p>
-          <p className="text-center text-sm text-muted-foreground">
-            Недель закрыто: {closedWeeks}/12 ·{" "}
-            <span className="inline-flex items-center gap-1 text-orange-400">
-              <Flame className="h-4 w-4" /> Streak {profile.streak}
+
+      <StatsHeroSummary
+        overview={overview}
+        cycleStartDate={cycleStartDate}
+        streak={profile.streak}
+        xp7d={xp7d}
+        totalXp={profile.xp}
+      />
+
+      <StatsWeekGrid
+        rows={weekRows}
+        activeWeek={activeWeek}
+        activeWeekTactical={overview.activeWeekTactical}
+        weekXp={weekXpFn}
+      />
+
+      <div className="game-surface space-y-4 p-4">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <h2 className="font-display text-lg font-semibold">По целям</h2>
+          <div className="flex w-full flex-col gap-1 sm:w-auto sm:items-end">
+            <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+              Задачи
             </span>
-          </p>
-        </CardContent>
-      </Card>
+            <Select
+              value={taskWeekScope}
+              onValueChange={(v) => setTaskWeekScope(v as "all" | "active")}
+            >
+              <SelectTrigger
+                className="h-9 w-full min-w-[10.5rem] max-w-[12rem] shrink-0 gap-1 overflow-hidden py-1.5 pl-2.5 pr-2 text-xs font-medium leading-none sm:w-[10.5rem] [&>span:first-of-type]:min-w-0 [&>span:first-of-type]:truncate [&>span:first-of-type]:text-left"
+                aria-label="Период задач для статистики"
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent align="end" className="min-w-[10.5rem]">
+                <SelectItem value="all">Весь цикл</SelectItem>
+                <SelectItem value="active">Неделя {activeWeek}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Разовые цели</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-2xl font-bold text-primary">
-            {onetime.completed} / {onetime.total}
-          </p>
-          <p className="text-sm text-muted-foreground">выполнено за цикл</p>
-        </CardContent>
-      </Card>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setFilterSphere("all")}
+            className={cn(
+              "rounded-lg border px-3 py-1.5 text-xs font-medium transition",
+              filterSphere === "all"
+                ? "border-primary/50 bg-primary/10 text-primary"
+                : "border-white/10 text-muted-foreground hover:text-foreground"
+            )}
+          >
+            Все
+          </button>
+          {visibleSpheres.map((s) => (
+            <button
+              key={s.id}
+              type="button"
+              onClick={() => setFilterSphere(s.id)}
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-lg border px-2 py-1.5 text-xs font-medium transition",
+                filterSphere === s.id
+                  ? "border-white/25 bg-white/10"
+                  : "border-white/10 text-muted-foreground hover:text-foreground"
+              )}
+              style={
+                filterSphere === s.id
+                  ? { borderColor: s.color, color: s.color }
+                  : undefined
+              }
+            >
+              <SphereGlyph icon={s.icon} color={s.color} size="xs" plain />
+              <span className="max-w-[6rem] truncate">{s.name}</span>
+            </button>
+          ))}
+        </div>
 
-      <div className="grid gap-2 md:grid-cols-2">
-        <Select value={filterSphere} onValueChange={setFilterSphere}>
-          <SelectTrigger>
-            <SelectValue placeholder="Сфера" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Все сферы</SelectItem>
-            {spheres.map((s) => (
-              <SelectItem key={s.id} value={s.id}>
-                {s.name}
-              </SelectItem>
+        {visibleSpheres.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            Нет направлений — добавь их при настройке или в «Герой → Цели».
+          </p>
+        ) : (
+          <div className="space-y-3">
+            {spheresToShow.map((sphere) => (
+              <StatsSphereCard
+                key={sphere.id}
+                sphere={sphere}
+                taskStats={sphereTaskStats(cycleTasks, sphere.id, taskWeekFilter)}
+                weekScopeLabel={weekScopeLabel}
+              />
             ))}
-          </SelectContent>
-        </Select>
-        <Select value={filterGoal} onValueChange={setFilterGoal}>
-          <SelectTrigger>
-            <SelectValue placeholder="Цель" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Все цели</SelectItem>
-            {visibleGoals.map((g) => (
-              <SelectItem key={g.id} value={g.id}>{g.title}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+          </div>
+        )}
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">По сферам</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {sphereStats.map(({ sphere, total, done, avg, onetime: ot }) => (
-            <div
-              key={sphere.id}
-              className="flex flex-col gap-1 rounded-lg border border-white/5 p-3 sm:flex-row sm:items-center sm:justify-between"
-              style={{ borderLeftColor: sphere.color, borderLeftWidth: 3 }}
-            >
-              <span className="flex items-center gap-2">
-                <SphereGlyph icon={sphere.icon} color={sphere.color} size="xs" />
-                {sphere.name}
-              </span>
-              <span className="text-sm text-muted-foreground">
-                {done}/{total} целей · {Math.round(avg)}% · разовые {ot.completed}/{ot.total}
-              </span>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
+      <div className="game-surface space-y-4 p-4">
+        <h2 className="font-display text-lg font-semibold">Активность</h2>
+        <p className="text-xs text-muted-foreground">
+          Здоровье сейчас: {Math.round(seasonFlame?.value ?? 100)}%
+        </p>
+        <StatsXpChart data={xpDaily} />
+        <div>
+          <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+            Источники XP · {XP_SOURCE_DAYS} дн.
+          </p>
+          <StatsXpSources rows={xpSources} total={xpSourceTotal} />
+        </div>
+      </div>
 
-      {chartGoals.map((g) => {
-        const sphere = spheres.find((s) => s.id === g.sphereId);
-        return (
-          <Card key={g.id}>
-            <CardHeader>
-              <CardTitle className="text-base">{g.title}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {g.type === "counter" ? (
-                <CounterChart goal={g} color={sphere?.color} />
-              ) : (
-                <MetricChart goal={g} color={sphere?.color} />
-              )}
-            </CardContent>
-          </Card>
-        );
-      })}
+      <StatsLegacyGoalsSection />
     </div>
   );
 }

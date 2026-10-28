@@ -33,7 +33,7 @@ export function SeasonMap({ className }: { className?: string }) {
         ))}
       </div>
       <p className="mt-3 text-center text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
-        12 недель · один сезон
+        12 недель · один круг
       </p>
     </div>
   );

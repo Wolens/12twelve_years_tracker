@@ -29,21 +29,27 @@ export const useAuthStore = create<AuthStore>((set) => ({
   initialized: false,
 
   init: () => {
+    const finish = () => set({ loading: false, initialized: true });
+
     if (!isSupabaseConfigured()) {
-      set({ loading: false, initialized: true });
+      finish();
       return () => {};
     }
 
     const supabase = getSupabaseBrowserClient();
+    const timeout = window.setTimeout(finish, 4000);
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      set({
-        session,
-        user: session?.user ?? null,
-        loading: false,
-        initialized: true,
-      });
-    });
+    supabase.auth
+      .getSession()
+      .then(({ data: { session } }) => {
+        set({
+          session,
+          user: session?.user ?? null,
+          loading: false,
+          initialized: true,
+        });
+      })
+      .catch(() => finish());
 
     const {
       data: { subscription },
@@ -56,7 +62,10 @@ export const useAuthStore = create<AuthStore>((set) => ({
       });
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      window.clearTimeout(timeout);
+      subscription.unsubscribe();
+    };
   },
 
   signUp: async (email, password) => {

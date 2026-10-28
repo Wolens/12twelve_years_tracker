@@ -1,5 +1,4 @@
 import { checkLevelAchievements } from "@/lib/gamification";
-import { isGoalComplete, isOnetimeComplete } from "@/lib/goals";
 import type { AchievementId, AppState, Profile } from "@/types";
 
 /** Стабильный порядок отображения */
@@ -21,12 +20,6 @@ const ACHIEVEMENT_ORDER: AchievementId[] = [
   "level_100",
 ];
 
-const DEMO_GOAL_TITLES = new Set([
-  "12 рилсов за цикл",
-  "Снизить вес до 75 кг",
-  "Накопить 50 000 ₽",
-]);
-
 function setsEqual(a: AchievementId[], b: AchievementId[]): boolean {
   if (a.length !== b.length) return false;
   const sa = new Set(a);
@@ -34,25 +27,18 @@ function setsEqual(a: AchievementId[], b: AchievementId[]): boolean {
 }
 
 export function computeEarnedAchievements(
-  state: Pick<AppState, "onboardingComplete" | "goals" | "weeks" | "spheres" | "profile">
+  state: Pick<AppState, "onboardingComplete" | "goals" | "weeks" | "spheres" | "profile" | "cycleTasks">
 ): AchievementId[] {
-  const { onboardingComplete, goals, weeks, spheres, profile } = state;
+  const { onboardingComplete, weeks, spheres, profile, cycleTasks } = state;
   const earned = new Set<AchievementId>();
 
   if (onboardingComplete) earned.add("onboarding_done");
 
-  if (goals.some((g) => DEMO_GOAL_TITLES.has(g.title))) {
+  if (cycleTasks.some((t) => t.title === "2 рилса" || t.title === "3 тренировки")) {
     earned.add("demo_loaded");
   }
 
-  if (goals.some((g) => g.type === "counter" && (g.increments?.length ?? 0) > 0)) {
-    earned.add("first_counter_log");
-  }
-  if (goals.some((g) => g.type === "metric" && (g.measurements?.length ?? 0) > 0)) {
-    earned.add("first_metric_log");
-  }
-
-  if (goals.some((g) => g.completed || isGoalComplete(g) || isOnetimeComplete(g))) {
+  if (cycleTasks.some((t) => t.done)) {
     earned.add("first_goal_done");
   }
 
@@ -70,14 +56,11 @@ export function computeEarnedAchievements(
     earned.add("cycle_complete");
   }
 
-  const spheresWithGoals = spheres.filter((s) =>
-    goals.some((g) => g.sphereId === s.id)
-  );
   if (
-    spheresWithGoals.length > 0 &&
-    spheresWithGoals.every((s) => {
-      const sg = goals.filter((g) => g.sphereId === s.id);
-      return sg.length > 0 && sg.every((g) => g.completed || isGoalComplete(g));
+    spheres.length > 0 &&
+    spheres.every((s) => {
+      const ts = cycleTasks.filter((t) => t.sphereId === s.id);
+      return ts.length > 0 && ts.every((t) => t.done);
     })
   ) {
     earned.add("all_sphere_goals");
@@ -94,14 +77,14 @@ export function computeEarnedAchievements(
 }
 
 export function syncProfileAchievements(
-  state: Pick<AppState, "onboardingComplete" | "goals" | "weeks" | "spheres" | "profile">
+  state: Pick<AppState, "onboardingComplete" | "goals" | "weeks" | "spheres" | "profile" | "cycleTasks">
 ): Profile {
   const achievements = computeEarnedAchievements(state);
   return { ...state.profile, achievements };
 }
 
 export function achievementsNeedSync(
-  state: Pick<AppState, "onboardingComplete" | "goals" | "weeks" | "spheres" | "profile">
+  state: Pick<AppState, "onboardingComplete" | "goals" | "weeks" | "spheres" | "profile" | "cycleTasks">
 ): boolean {
   return !setsEqual(state.profile.achievements, computeEarnedAchievements(state));
 }

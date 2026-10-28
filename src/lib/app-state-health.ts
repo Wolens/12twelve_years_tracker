@@ -1,4 +1,5 @@
 import type { AppState, CycleTask, Goal, Sphere, WeekData, XpLedgerEntry } from "@/types";
+import { resolveSphereFilterId } from "./sphere-filter-default";
 
 /** Есть ли у пользователя реальный прогресс (не пустой гость). */
 export function hasUserProgress(state: AppState): boolean {
@@ -148,5 +149,9 @@ export function repairAppState(state: AppState): AppState {
     };
   }
 
-  return next;
+  return {
+    ...next,
+    weekFilterSphereId: resolveSphereFilterId(next.spheres, next.weekFilterSphereId),
+    goalsFilterSphereId: resolveSphereFilterId(next.spheres, next.goalsFilterSphereId),
+  };
 }

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { motion } from "framer-motion";
 import { useAppStore } from "@/store/useAppStore";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -9,15 +8,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider-simple";
-import { SphereFilterBar } from "@/components/spheres/sphere-filter-bar";
-import { groupWeekTasksBySphere } from "@/lib/sphere-filters";
-import { groupTasksByGoal } from "@/lib/week-tasks";
-import { WeekTaskFormDialog } from "@/components/goals/week-task-form-dialog";
-import type { WeekReflection } from "@/types";
 import { WeekControls } from "@/components/dashboard/week-controls";
-import type { CycleTask } from "@/types";
+import { groupWeekTasksBySphere } from "@/lib/sphere-filters";
+import { WeekTaskFormDialog } from "@/components/goals/week-task-form-dialog";
+import type { CycleTask, WeekReflection } from "@/types";
 import { Pencil } from "lucide-react";
-import { SphereGlyph } from "@/components/spheres/sphere-glyph";
 
 type Props = { week: number };
 
@@ -27,10 +22,10 @@ type TaskDialogState =
   | null;
 
 export function WeekDetail({ week }: Props) {
-  const goals = useAppStore((s) => s.goals);
   const cycleTasks = useAppStore((s) => s.cycleTasks);
   const spheres = useAppStore((s) => s.spheres);
-  const hiddenSphereIds = useAppStore((s) => s.hiddenSphereIds);
+  const hiddenSphereIds = useAppStore((s) => s.weekHiddenSphereIds);
+  const weekFilterSphereId = useAppStore((s) => s.weekFilterSphereId);
   const weeks = useAppStore((s) => s.weeks);
   const toggleCycleTask = useAppStore((s) => s.toggleCycleTask);
   const deleteCycleTask = useAppStore((s) => s.deleteCycleTask);
@@ -48,118 +43,97 @@ export function WeekDetail({ week }: Props) {
     struggles: "",
   };
 
-  const groups = groupWeekTasksBySphere(cycleTasks, spheres, week, hiddenSphereIds);
-  const allTasks = groups.flatMap((g) => g.tasks);
-  const allDone = allTasks.length > 0 && allTasks.every((t) => t.done);
+  const groups = groupWeekTasksBySphere(
+    cycleTasks,
+    spheres,
+    week,
+    hiddenSphereIds,
+    weekFilterSphereId
+  );
+  const block = groups[0];
+  const tasks = block?.tasks ?? [];
+  const sphere = block?.sphere;
+  const allDone = tasks.length > 0 && tasks.every((t) => t.done);
 
   const saveReflection = (patch: Partial<WeekReflection>) => {
     setWeekReflection(week, { ...reflection, ...patch });
   };
 
   return (
-    <motion.div className="space-y-4 px-4">
+    <div className="space-y-4 px-4">
       <Card>
-        <CardHeader className="space-y-3">
-          <CardTitle>Задачи недели {week}</CardTitle>
-          <SphereFilterBar variant="inline" className="px-0" />
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {groups.length === 0 && (
+        <CardContent className="space-y-6 pt-6">
+          {!sphere && (
             <p className="text-sm text-muted-foreground">
-              Включите сферы в фильтре в шапке карточки — появятся блоки задач.
+              Добавьте цель на 12 недель или выберите вкладку выше.
             </p>
           )}
-          {groups.map(({ sphere, tasks }) => {
-            const sphereGoals = goals.filter((g) => g.sphereId === sphere.id);
-            const byGoal = groupTasksByGoal(tasks, sphereGoals);
-
-            return (
-              <div key={sphere.id} className="space-y-3">
-                <div className="flex items-center justify-between gap-2">
-                  <h3 className="flex items-center gap-2 text-sm font-semibold">
-                    <SphereGlyph icon={sphere.icon} color={sphere.color} size="sm" />
-                    <span style={{ color: sphere.color }}>{sphere.name}</span>
-                  </h3>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setTaskDialog({ mode: "add", sphereId: sphere.id })}
-                  >
-                    + Задача
-                  </Button>
-                </div>
-                {tasks.length === 0 && (
-                  <p className="text-xs text-muted-foreground">Нет задач на эту неделю</p>
-                )}
-                {byGoal.map(({ goal, tasks: goalTasks }) => (
+          {sphere && (
+            <div className="space-y-3">
+              <div className="flex justify-end">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setTaskDialog({ mode: "add", sphereId: sphere.id })}
+                >
+                  + Задача
+                </Button>
+              </div>
+              {tasks.length === 0 && (
+                <p className="text-xs text-muted-foreground">Нет задач на эту неделю</p>
+              )}
+              <div className="space-y-1">
+                {tasks.map((task) => (
                   <div
-                    key={goal?.id ?? "orphan"}
-                    className="rounded-lg border border-white/5 bg-background/20 p-2"
+                    key={task.id}
+                    className="flex items-start gap-3 rounded-md border border-white/5 bg-background/30 p-2"
                   >
-                    <p
-                      className="flex items-center gap-2 px-2 py-1.5 text-xs font-medium tracking-wide text-muted-foreground"
-                      style={{ borderLeft: `2px solid ${sphere.color}` }}
-                    >
-                      <span className="text-foreground/90">
-                        {goal ? goal.title : "Задачи без цели"}
-                      </span>
-                    </p>
-                    <div className="space-y-1">
-                      {goalTasks.map((task) => (
-                        <div
-                          key={task.id}
-                          className="ml-3 flex items-start gap-3 rounded-md border border-white/5 border-l-2 bg-background/30 p-2 pl-3"
-                          style={{ borderLeftColor: sphere.color }}
-                        >
-                          <Checkbox
-                            id={task.id}
-                            checked={task.done}
-                            onCheckedChange={() => toggleCycleTask(task.id)}
-                          />
-                          <div className="flex-1">
-                            <Label
-                              htmlFor={task.id}
-                              className="cursor-pointer text-sm font-normal leading-snug"
-                            >
-                              {task.title}
-                            </Label>
-                          </div>
-                          <div className="flex shrink-0 gap-0.5">
-                            <Button
-                              type="button"
-                              size="icon"
-                              variant="ghost"
-                              className="h-8 w-8 text-muted-foreground"
-                              aria-label="Редактировать"
-                              onClick={() => setTaskDialog({ mode: "edit", task })}
-                            >
-                              <Pencil className="h-3.5 w-3.5" />
-                            </Button>
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="ghost"
-                              className="text-muted-foreground"
-                              onClick={() => deleteCycleTask(task.id)}
-                            >
-                              ×
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
+                    <Checkbox
+                      id={task.id}
+                      checked={task.done}
+                      onCheckedChange={() => toggleCycleTask(task.id)}
+                    />
+                    <div className="flex-1">
+                      <Label
+                        htmlFor={task.id}
+                        className="cursor-pointer text-sm font-normal leading-snug"
+                      >
+                        {task.title}
+                      </Label>
+                    </div>
+                    <div className="flex shrink-0 gap-0.5">
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8 text-muted-foreground"
+                        aria-label="Редактировать"
+                        onClick={() => setTaskDialog({ mode: "edit", task })}
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        className="text-muted-foreground"
+                        onClick={() => deleteCycleTask(task.id)}
+                      >
+                        ×
+                      </Button>
                     </div>
                   </div>
                 ))}
               </div>
-            );
-          })}
+            </div>
+          )}
           <WeekTaskFormDialog
             sphereId={
               taskDialog?.mode === "add"
                 ? taskDialog.sphereId
                 : taskDialog?.mode === "edit"
                   ? taskDialog.task.sphereId
-                  : ""
+                  : weekFilterSphereId
             }
             week={week}
             open={taskDialog !== null}
@@ -198,25 +172,14 @@ export function WeekDetail({ week }: Props) {
               onChange={(e) => saveReflection({ note: e.target.value })}
               placeholder="Главное за неделю..."
             />
-          </div>
-          <div>
-            <Label>Что получилось</Label>
-            <Textarea
-              value={reflection.wins}
-              onChange={(e) => saveReflection({ wins: e.target.value })}
-            />
-          </div>
-          <div>
-            <Label>Что не получилось</Label>
-            <Textarea
-              value={reflection.struggles}
-              onChange={(e) => saveReflection({ struggles: e.target.value })}
-            />
+            <p className="mt-1.5 text-[11px] text-muted-foreground">
+              Сохраняется в архиве ниже на этой странице — по каждой неделе отдельно.
+            </p>
           </div>
         </CardContent>
       </Card>
 
       {week === activeWeek && <WeekControls />}
-    </motion.div>
+    </div>
   );
 }

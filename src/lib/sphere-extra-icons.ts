@@ -1,0 +1,191 @@
+import type { LucideIcon } from "lucide-react";
+import {
+  Anchor,
+  Bed,
+  Bike,
+  Brush,
+  Building2,
+  Calendar,
+  Camera,
+  Car,
+  Cat,
+  Clapperboard,
+  Cloud,
+  Coffee,
+  Compass,
+  Crown,
+  Dog,
+  Dumbbell,
+  Flag,
+  Flame,
+  Flower2,
+  Gamepad2,
+  Gem,
+  Gift,
+  Globe2,
+  GraduationCap,
+  Headphones,
+  HeartPulse,
+  Home,
+  Lamp,
+  Laptop,
+  Leaf,
+  Lightbulb,
+  MapPin,
+  Medal,
+  MessageCircle,
+  Mic2,
+  Moon,
+  Mountain,
+  Music2,
+  Package,
+  PawPrint,
+  PenLine,
+  Plane,
+  Rocket,
+  Shield,
+  Ship,
+  ShoppingBag,
+  Sparkles,
+  Star,
+  Sun,
+  Target,
+  Tent,
+  Timer,
+  TrainFront,
+  TreePine,
+  TrendingUp,
+  Trophy,
+  Users,
+  UtensilsCrossed,
+  Wallet,
+  Waves,
+  Wrench,
+  Zap,
+} from "lucide-react";
+
+export type ExtraSphereIconDef = {
+  key: string;
+  label: string;
+  Icon: LucideIcon;
+};
+
+/** Дополнительные знаки для «своих» сфер — Lucide, как у готовых направлений. */
+export const EXTRA_SPHERE_ICON_DEFS: ExtraSphereIconDef[] = [
+  { key: "star", label: "Звезда", Icon: Star },
+  { key: "target", label: "Цель", Icon: Target },
+  { key: "sparkle", label: "Искра", Icon: Sparkles },
+  { key: "idea", label: "Идея", Icon: Lightbulb },
+  { key: "zap", label: "Энергия", Icon: Zap },
+  { key: "flame", label: "Огонь", Icon: Flame },
+  { key: "home", label: "Дом", Icon: Home },
+  { key: "team", label: "Люди", Icon: Users },
+  { key: "pet", label: "Питомец", Icon: PawPrint },
+  { key: "plane", label: "Путешествие", Icon: Plane },
+  { key: "mountain", label: "Природа", Icon: Mountain },
+  { key: "waves", label: "Море", Icon: Waves },
+  { key: "car", label: "Дорога", Icon: Car },
+  { key: "music", label: "Музыка", Icon: Music2 },
+  { key: "game", label: "Игра", Icon: Gamepad2 },
+  { key: "photo", label: "Фото", Icon: Camera },
+  { key: "voice", label: "Голос", Icon: Mic2 },
+  { key: "strength", label: "Сила", Icon: Dumbbell },
+  { key: "food", label: "Кухня", Icon: UtensilsCrossed },
+  { key: "coffee", label: "Кофе", Icon: Coffee },
+  { key: "study", label: "Учёба", Icon: GraduationCap },
+  { key: "chat", label: "Общение", Icon: MessageCircle },
+  { key: "tools", label: "Дело", Icon: Wrench },
+  { key: "gift", label: "Подарок", Icon: Gift },
+  { key: "trophy", label: "Победа", Icon: Trophy },
+  { key: "rocket", label: "Старт", Icon: Rocket },
+  { key: "flower", label: "Красота", Icon: Flower2 },
+  { key: "sun", label: "Солнце", Icon: Sun },
+  { key: "compass", label: "Курс", Icon: Compass },
+  { key: "anchor", label: "Якорь", Icon: Anchor },
+  { key: "bike", label: "Вело", Icon: Bike },
+  { key: "moon", label: "Ночь", Icon: Moon },
+  { key: "cloud", label: "Небо", Icon: Cloud },
+  { key: "tree", label: "Лес", Icon: TreePine },
+  { key: "leaf", label: "Лист", Icon: Leaf },
+  { key: "cat", label: "Кот", Icon: Cat },
+  { key: "dog", label: "Собака", Icon: Dog },
+  { key: "pulse", label: "Пульс", Icon: HeartPulse },
+  { key: "timer", label: "Время", Icon: Timer },
+  { key: "calendar", label: "Календарь", Icon: Calendar },
+  { key: "mappin", label: "Место", Icon: MapPin },
+  { key: "globe", label: "Мир", Icon: Globe2 },
+  { key: "pen", label: "Запись", Icon: PenLine },
+  { key: "brush", label: "Рисунок", Icon: Brush },
+  { key: "laptop", label: "Работа", Icon: Laptop },
+  { key: "chart", label: "Рост", Icon: TrendingUp },
+  { key: "wallet", label: "Кошелёк", Icon: Wallet },
+  { key: "shop", label: "Покупки", Icon: ShoppingBag },
+  { key: "building", label: "Офис", Icon: Building2 },
+  { key: "shield", label: "Защита", Icon: Shield },
+  { key: "flag", label: "Флаг", Icon: Flag },
+  { key: "medal", label: "Медаль", Icon: Medal },
+  { key: "crown", label: "Корона", Icon: Crown },
+  { key: "gem", label: "Камень", Icon: Gem },
+  { key: "package", label: "Посылка", Icon: Package },
+  { key: "train", label: "Поезд", Icon: TrainFront },
+  { key: "ship", label: "Корабль", Icon: Ship },
+  { key: "tent", label: "Лагерь", Icon: Tent },
+  { key: "lamp", label: "Свет", Icon: Lamp },
+  { key: "bed", label: "Отдых", Icon: Bed },
+  { key: "headphones", label: "Аудио", Icon: Headphones },
+  { key: "film", label: "Кино", Icon: Clapperboard },
+];
+
+export const EXTRA_SPHERE_ICON_KEYS = EXTRA_SPHERE_ICON_DEFS.map((d) => d.key);
+
+export const DEFAULT_EXTRA_SPHERE_ICON = "star";
+
+export const EXTRA_SPHERE_ICONS: Record<string, LucideIcon> = Object.fromEntries(
+  EXTRA_SPHERE_ICON_DEFS.map((d) => [d.key, d.Icon])
+);
+
+export const EXTRA_SPHERE_ICON_LABELS: Record<string, string> = Object.fromEntries(
+  EXTRA_SPHERE_ICON_DEFS.map((d) => [d.key, d.label])
+);
+
+/** Старые unicode-смайлики → ключ Lucide. */
+export const LEGACY_EMOJI_TO_EXTRA: Record<string, string> = {
+  "⭐": "star",
+  "🌟": "star",
+  "✨": "sparkle",
+  "🎯": "target",
+  "💡": "idea",
+  "🔥": "flame",
+  "🏠": "home",
+  "👨‍👩‍👧": "team",
+  "🐾": "pet",
+  "🐕": "pet",
+  "✈️": "plane",
+  "🏔️": "mountain",
+  "🌍": "compass",
+  "🚗": "car",
+  "🎸": "music",
+  "🎮": "game",
+  "📷": "photo",
+  "🎤": "voice",
+  "⚽": "trophy",
+  "🏋️": "strength",
+  "🍳": "food",
+  "☕": "coffee",
+  "📖": "study",
+  "🎓": "study",
+  "💬": "chat",
+  "🛠️": "tools",
+  "🎁": "gift",
+  "🌸": "flower",
+  "☀️": "sun",
+  "♻️": "restored",
+};
+
+export function isExtraSphereIcon(icon: string): boolean {
+  return icon in EXTRA_SPHERE_ICONS;
+}
+
+export function isCustomSphereEmoji(_icon: string): boolean {
+  return false;
+}

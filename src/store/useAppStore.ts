@@ -23,6 +23,7 @@ import { todayISO } from "@/lib/gamification";
 import {
   grantXp,
   revokeXpBySource,
+  syncProfileFromLedger,
   xpSourceCycleTask,
   xpSourceGoalComplete,
   xpSourceOnetimeGoal,
@@ -39,8 +40,42 @@ import {
 import { applyDemoPatch, buildDemoGoals } from "@/lib/demo-data";
 import { generateId } from "@/lib/utils";
 import { migrateAppState } from "@/lib/migrate";
+import { resolveSphereFilterId } from "@/lib/sphere-filter-default";
 import { assignGoalToDay, removeGoalFromWeekPlan } from "@/lib/day-plan";
 import { hasUserProgress, repairAppState } from "@/lib/app-state-health";
+import {
+  dailyQuestBonusAmount,
+  randomRitualXp,
+  ritualClaimedToday,
+  xpSourceDailyQuest,
+  xpSourceDailyRitual,
+  canClaimDailyQuest,
+} from "@/lib/daily-engagement";
+import { createInitialCharacter, createInitialSeasonFlame } from "@/lib/rpg/defaults";
+import { adjustCoins } from "@/lib/rpg/store-helpers";
+import {
+  COINS_PER_DAILY_QUEST,
+  COINS_PER_GOAL,
+  COINS_PER_RITUAL,
+  COINS_PER_TASK,
+  COINS_PER_WEEK,
+} from "@/lib/rpg/coins";
+import { tendFlame, applyFlameDecay, applyDailyFirstVisitHeal } from "@/lib/rpg/season-flame";
+import { itemById, normalizeRace, STARTER_ITEM_IDS } from "@/lib/rpg/catalog";
+import { itemShopSellPrice } from "@/lib/rpg/shop-economy";
+import { rollChestItem } from "@/lib/rpg/chest-roll";
+import {
+  duplicateCoinsForItem,
+  isWeekStartFloor,
+  rollFloorChestItem,
+} from "@/lib/rpg/floor-chest";
+import {
+  chestLevelsToGrant,
+  createChestForLevel,
+} from "@/lib/rpg/level-roadmap";
+import { levelFromXp } from "@/lib/gamification";
+import type { CharacterGender, CharacterState, EquipSlot, ItemRarity, RaceId } from "@/types/rpg";
+import { RACE_UNLOCK_LEVEL } from "@/types/rpg";
 
 function createInitialWeeks(): WeekData[] {
   return Array.from({ length: 12 }, (_, i) => ({
@@ -60,6 +95,8 @@ function createInitialProfile(): AppState["profile"] {
     lastActivityDate: null,
     achievements: [],
     xpLedger: [],
+    lastRitualDate: null,
+    dailyQuestClaimDate: null,
   };
 }
 
@@ -78,7 +115,12 @@ export function createInitialState(): AppState {
     profile: createInitialProfile(),
     theme: "dark",
     hiddenSphereIds: [],
+    weekHiddenSphereIds: [],
+    weekFilterSphereId: "",
+    goalsFilterSphereId: "",
     dayAssignments: {},
+    character: createInitialCharacter(),
+    seasonFlame: createInitialSeasonFlame(),
   };
 }
 
@@ -91,10 +133,36 @@ type Store = AppState & {
   restartTour: () => void;
   setTheme: (theme: ThemeMode) => void;
   updateProfile: (patch: Partial<AppState["profile"]>) => void;
+  claimDailyRitual: () => number;
+  /** Прошедший день без захода: трещина становится пустой тропой. */
+  visitPastDay: (date: string) => boolean;
+  claimDailyQuestBonus: () => number;
+  processSeasonFlameOnBoot: () => { missedDays: number; coinsLost: number };
+  syncLevelRewards: () => void;
+  setupCharacterIdentity: (gender: CharacterGender, birthDate: string) => void;
+  setCharacterRace: (race: RaceId) => void;
+  buyGameItem: (itemId: string) => boolean;
+  sellGameItem: (itemId: string) => boolean;
+  equipGameItem: (itemId: string) => void;
+  unequipGameItem: (slot: EquipSlot) => void;
+  openGameChest: (chestId: string) => string | null;
+  openFloorChest: (
+    floorDay: number,
+    reachDay: number
+  ) => {
+    itemId: string;
+    itemName: string;
+    rarity: ItemRarity;
+    duplicate: boolean;
+    coins: number;
+  } | null;
   addSphere: (sphere: Omit<Sphere, "id">) => void;
   deleteSphere: (id: string) => void;
   updateSphere: (id: string, patch: Partial<Omit<Sphere, "id">>) => void;
   toggleSphereVisibility: (sphereId: string) => void;
+  toggleWeekSphereVisibility: (sphereId: string) => void;
+  setWeekFilterSphereId: (sphereId: string) => void;
+  setGoalsFilterSphereId: (sphereId: string) => void;
   addGoal: (goal: Omit<Goal, "id">) => void;
   updateGoal: (id: string, patch: Partial<Goal>) => void;
   deleteGoal: (id: string) => void;
@@ -102,7 +170,7 @@ type Store = AppState & {
   addCycleTask: (task: Omit<CycleTask, "id" | "done">) => void;
   updateCycleTask: (
     taskId: string,
-    patch: Partial<Pick<CycleTask, "title" | "goalId">>
+    patch: Partial<Pick<CycleTask, "title" | "week">>
   ) => void;
   toggleCycleTask: (taskId: string) => void;
   deleteCycleTask: (taskId: string) => void;
@@ -128,10 +196,17 @@ type Store = AppState & {
 
 function checkGoalCompletion(
   goals: Goal[],
-  profile: AppState["profile"]
-): { goals: Goal[]; profile: AppState["profile"]; levelUp: LevelUpEvent } {
+  profile: AppState["profile"],
+  character: CharacterState
+): {
+  goals: Goal[];
+  profile: AppState["profile"];
+  character: CharacterState;
+  levelUp: LevelUpEvent;
+} {
   let levelUp: LevelUpEvent = null;
   let p = profile;
+  let c = character;
   const updated = goals.map((g) => {
     if (g.completed) return g;
     const done =
@@ -148,12 +223,13 @@ function checkGoalCompletion(
         withStreak: false,
       });
       p = res.profile;
+      c = adjustCoins(c, COINS_PER_GOAL);
       if (res.levelUp) levelUp = res.levelUp;
       return { ...g, completed: true, done: g.type === "onetime" ? true : g.done };
     }
     return g;
   });
-  return { goals: updated, profile: p, levelUp };
+  return { goals: updated, profile: p, character: c, levelUp };
 }
 
 function recomputeWeekClosed(
@@ -189,14 +265,19 @@ export const useAppStore = create<Store>()(
             });
           }
 
+          const nextSpheres =
+            spheres.length > 0
+              ? spheres
+              : DEFAULT_SPHERES.map((s) => ({
+                  ...s,
+                  id: generateId(),
+                })).slice(0, 4);
+          const firstId = nextSpheres[0]?.id ?? "";
+
           return {
-            spheres:
-              spheres.length > 0
-                ? spheres
-                : DEFAULT_SPHERES.map((s) => ({
-                    ...s,
-                    id: generateId(),
-                  })).slice(0, 4),
+            spheres: nextSpheres,
+            weekFilterSphereId: firstId,
+            goalsFilterSphereId: firstId,
             onboardingComplete: true,
             cycleStartDate: todayISO(),
             weeks: createInitialWeeks(),
@@ -215,10 +296,277 @@ export const useAppStore = create<Store>()(
       updateProfile: (patch) =>
         set((s) => ({ profile: { ...s.profile, ...patch } })),
 
-      addSphere: (sphere) =>
+      claimDailyRitual: () => {
+        const today = todayISO();
+        if (ritualClaimedToday(get().profile)) return 0;
+        const amount = randomRitualXp();
+        set((s) => {
+          const { profile, levelUp } = grantXp(s.profile, {
+            baseAmount: amount,
+            label: "Ритуал: открыт день",
+            sourceId: xpSourceDailyRitual(today),
+            withStreak: true,
+          });
+          return {
+            profile: { ...profile, lastRitualDate: today },
+            seasonFlame: tendFlame(s.seasonFlame, s.character.race),
+            character: adjustCoins(s.character, COINS_PER_RITUAL),
+            levelUpEvent: levelUp,
+          };
+        });
+        get().syncLevelRewards();
+        return amount;
+      },
+
+      visitPastDay: (date) => {
+        const today = todayISO();
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || date >= today) return false;
+        const sourceId = xpSourceDailyRitual(date);
+        if ((get().profile.xpLedger ?? []).some((e) => e.sourceId === sourceId)) return false;
         set((s) => ({
-          spheres: [...s.spheres, { ...sphere, id: generateId(), custom: true }],
+          profile: syncProfileFromLedger({
+            ...s.profile,
+            xpLedger: [
+              ...(s.profile.xpLedger ?? []),
+              {
+                id: generateId(),
+                at: `${date}T12:00:00.000Z`,
+                amount: 1,
+                label: "Заход в прошедший день",
+                sourceId,
+              },
+            ],
+          }),
+          seasonFlame: tendFlame(s.seasonFlame, s.character.race),
+        }));
+        return true;
+      },
+
+      claimDailyQuestBonus: () => {
+        const today = todayISO();
+        const state = get();
+        if (!canClaimDailyQuest(state.profile, state.profile.xpLedger)) return 0;
+        const questMult = normalizeRace(state.character.race) === "jedi" ? 1.5 : 1;
+        const amount = Math.round(dailyQuestBonusAmount() * questMult);
+        set((s) => {
+          const { profile, levelUp } = grantXp(s.profile, {
+            baseAmount: amount,
+            label: "Квест дня выполнен",
+            sourceId: xpSourceDailyQuest(today),
+            withStreak: false,
+          });
+          return {
+            profile: { ...profile, dailyQuestClaimDate: today },
+            character: adjustCoins(s.character, Math.round(COINS_PER_DAILY_QUEST * questMult)),
+            levelUpEvent: levelUp,
+          };
+        });
+        return amount;
+      },
+
+      processSeasonFlameOnBoot: () => {
+        const s = get();
+        let seasonFlame = s.seasonFlame ?? createInitialSeasonFlame();
+        const character = s.character ?? createInitialCharacter();
+        const { flame, missedDays, coinsPenalty } = applyFlameDecay(
+          seasonFlame,
+          s.profile.lastRitualDate,
+          character.race
+        );
+        seasonFlame = applyDailyFirstVisitHeal(flame);
+        const prevFlame = s.seasonFlame ?? createInitialSeasonFlame();
+        const changed =
+          missedDays > 0 ||
+          seasonFlame.value !== prevFlame.value ||
+          (seasonFlame.lastDailyVisitHealDate ?? null) !==
+            (prevFlame.lastDailyVisitHealDate ?? null);
+        if (!changed) {
+          return { missedDays: 0, coinsLost: 0 };
+        }
+        set({
+          seasonFlame,
+          character: adjustCoins(character, -coinsPenalty),
+        });
+        return { missedDays, coinsLost: coinsPenalty };
+      },
+
+      syncLevelRewards: () => {
+        const s = get();
+        const level = levelFromXp(s.profile.xp);
+        const grants = chestLevelsToGrant(level, s.character.claimedLevelRewards);
+        if (grants.length === 0) return;
+        set((state) => {
+          const claimed = [...state.character.claimedLevelRewards];
+          const chests = [...state.character.pendingChests];
+          for (const g of grants) {
+            if (claimed.includes(g.level)) continue;
+            claimed.push(g.level);
+            chests.push(createChestForLevel(g.level, g.tier));
+          }
+          return {
+            character: {
+              ...state.character,
+              claimedLevelRewards: claimed,
+              pendingChests: chests,
+            },
+          };
+        });
+      },
+
+      setupCharacterIdentity: (gender, birthDate) =>
+        set((s) => ({
+          character: {
+            ...s.character,
+            gender,
+            birthDate,
+            identitySetupDone: true,
+          },
+          profile: {
+            ...s.profile,
+            avatar: gender === "female" ? "👩" : "👨",
+          },
         })),
+
+      setCharacterRace: (race) => {
+        if (levelFromXp(get().profile.xp) < RACE_UNLOCK_LEVEL && race !== "human") return;
+        set((s) => ({ character: { ...s.character, race } }));
+      },
+
+      buyGameItem: (itemId) => {
+        const item = itemById(itemId);
+        if (!item) return false;
+        const s = get();
+        const level = levelFromXp(s.profile.xp);
+        if (level < item.requiredLevel || s.character.coins < item.price || item.price <= 0)
+          return false;
+        if (s.character.inventory.includes(itemId)) return false;
+        set((state) => ({
+          character: adjustCoins(
+            {
+              ...state.character,
+              inventory: [...state.character.inventory, itemId],
+            },
+            -item.price
+          ),
+        }));
+        return true;
+      },
+
+      sellGameItem: (itemId) => {
+        const item = itemById(itemId);
+        if (!item) return false;
+        if (STARTER_ITEM_IDS.includes(itemId as (typeof STARTER_ITEM_IDS)[number])) return false;
+        const sellPrice = itemShopSellPrice(item);
+        if (sellPrice <= 0 || sellPrice >= item.price) return false;
+        const s = get();
+        if (!s.character.inventory.includes(itemId)) return false;
+        set((state) => {
+          const equipped = { ...state.character.equipped };
+          if (equipped[item.slot] === itemId) {
+            delete equipped[item.slot];
+          }
+          return {
+            character: adjustCoins(
+              {
+                ...state.character,
+                equipped,
+                inventory: state.character.inventory.filter((id) => id !== itemId),
+              },
+              sellPrice
+            ),
+          };
+        });
+        return true;
+      },
+
+      equipGameItem: (itemId) => {
+        const item = itemById(itemId);
+        if (!item) return;
+        set((s) => {
+          if (!s.character.inventory.includes(itemId)) return s;
+          return {
+            character: {
+              ...s.character,
+              equipped: { ...s.character.equipped, [item.slot]: itemId },
+            },
+          };
+        });
+      },
+
+      unequipGameItem: (slot) => {
+        set((s) => {
+          const equipped = { ...s.character.equipped };
+          delete equipped[slot];
+          return { character: { ...s.character, equipped } };
+        });
+      },
+
+      openGameChest: (chestId) => {
+        const s = get();
+        const chest = s.character.pendingChests.find((c) => c.id === chestId);
+        if (!chest) return null;
+        const level = levelFromXp(s.profile.xp);
+        const itemId = rollChestItem(chest, s.character.inventory, level);
+        if (!itemId) return null;
+        const item = itemById(itemId);
+        if (!item) return null;
+        set((state) => ({
+          character: {
+            ...state.character,
+            pendingChests: state.character.pendingChests.filter((c) => c.id !== chestId),
+            inventory: state.character.inventory.includes(itemId)
+              ? state.character.inventory
+              : [...state.character.inventory, itemId],
+          },
+        }));
+        return item.name;
+      },
+
+      openFloorChest: (floorDay, reachDay) => {
+        const s = get();
+        if (!isWeekStartFloor(floorDay)) return null;
+        if (floorDay > reachDay) return null;
+        const claimed = s.character.claimedFloorChests ?? [];
+        if (claimed.includes(floorDay)) return null;
+        const level = levelFromXp(s.profile.xp);
+        const itemId = rollFloorChestItem(level);
+        const item = itemById(itemId);
+        if (!item) return null;
+        const duplicate = s.character.inventory.includes(itemId);
+        const coins = duplicate ? duplicateCoinsForItem(itemId) : 0;
+        set((state) => ({
+          character: adjustCoins(
+            {
+              ...state.character,
+              claimedFloorChests: [...(state.character.claimedFloorChests ?? []), floorDay],
+              inventory: duplicate
+                ? state.character.inventory
+                : [...state.character.inventory, itemId],
+            },
+            coins
+          ),
+        }));
+        return {
+          itemId,
+          itemName: item.name,
+          rarity: item.rarity,
+          duplicate,
+          coins,
+        };
+      },
+
+      addSphere: (sphere) =>
+        set((s) => {
+          const id = generateId();
+          const spheres = [...s.spheres, { ...sphere, id, custom: true }];
+          const isFirst = s.spheres.length === 0;
+          return {
+            spheres,
+            ...(isFirst
+              ? { weekFilterSphereId: id, goalsFilterSphereId: id }
+              : {}),
+          };
+        }),
 
       deleteSphere: (id) =>
         set((s) => {
@@ -231,12 +579,16 @@ export const useAppStore = create<Store>()(
               (tid) => !removedTaskIds.has(tid)
             );
           }
+          const spheres = s.spheres.filter((sp) => sp.id !== id);
           return {
-            spheres: s.spheres.filter((sp) => sp.id !== id),
+            spheres,
             goals: s.goals.filter((g) => g.sphereId !== id),
             cycleTasks: s.cycleTasks.filter((t) => t.sphereId !== id),
             hiddenSphereIds: s.hiddenSphereIds.filter((sid) => sid !== id),
+            weekHiddenSphereIds: s.weekHiddenSphereIds.filter((sid) => sid !== id),
             dayAssignments,
+            weekFilterSphereId: resolveSphereFilterId(spheres, s.weekFilterSphereId),
+            goalsFilterSphereId: resolveSphereFilterId(spheres, s.goalsFilterSphereId),
           };
         }),
 
@@ -254,6 +606,18 @@ export const useAppStore = create<Store>()(
           else hidden.add(sphereId);
           return { hiddenSphereIds: Array.from(hidden) };
         }),
+
+      toggleWeekSphereVisibility: (sphereId) =>
+        set((s) => {
+          const hidden = new Set(s.weekHiddenSphereIds);
+          if (hidden.has(sphereId)) hidden.delete(sphereId);
+          else hidden.add(sphereId);
+          return { weekHiddenSphereIds: Array.from(hidden) };
+        }),
+
+      setWeekFilterSphereId: (sphereId) => set({ weekFilterSphereId: sphereId }),
+
+      setGoalsFilterSphereId: (sphereId) => set({ goalsFilterSphereId: sphereId }),
 
       addGoal: (goal) =>
         set((s) => ({
@@ -326,10 +690,11 @@ export const useAppStore = create<Store>()(
             profile = revokeXpBySource(profile, xpSourceOnetimeGoal(goalId));
           }
 
-          const checked = checkGoalCompletion(goals, profile);
+          const checked = checkGoalCompletion(goals, profile, s.character);
           return {
             goals: checked.goals,
             profile: checked.profile,
+            character: checked.character,
             levelUpEvent: checked.levelUp ?? levelUp,
           };
         });
@@ -337,14 +702,12 @@ export const useAppStore = create<Store>()(
 
       addCycleTask: (task) =>
         set((s) => {
-          const goal = s.goals.find((g) => g.id === task.goalId);
-          if (!goal) return s;
+          if (!s.spheres.some((sp) => sp.id === task.sphereId)) return s;
           const cycleTasks = [
             ...s.cycleTasks,
             {
               ...task,
               id: generateId(),
-              sphereId: goal.sphereId,
               done: false,
             },
           ];
@@ -353,17 +716,9 @@ export const useAppStore = create<Store>()(
 
       updateCycleTask: (taskId, patch) =>
         set((s) => {
-          const goal = patch.goalId
-            ? s.goals.find((g) => g.id === patch.goalId)
-            : undefined;
-          const cycleTasks = s.cycleTasks.map((t) => {
-            if (t.id !== taskId) return t;
-            return {
-              ...t,
-              ...patch,
-              sphereId: goal?.sphereId ?? t.sphereId,
-            };
-          });
+          const cycleTasks = s.cycleTasks.map((t) =>
+            t.id === taskId ? { ...t, ...patch } : t
+          );
           return { cycleTasks, weeks: recomputeWeekClosed(cycleTasks, s.weeks) };
         }),
 
@@ -376,6 +731,7 @@ export const useAppStore = create<Store>()(
           );
           const nowDone = !prev.done;
           let profile = s.profile;
+          let character = s.character;
           let levelUp: LevelUpEvent = null;
           if (nowDone) {
             const res = grantXp(profile, {
@@ -385,13 +741,16 @@ export const useAppStore = create<Store>()(
               withStreak: true,
             });
             profile = res.profile;
+            character = adjustCoins(character, COINS_PER_TASK);
             levelUp = res.levelUp;
           } else {
             profile = revokeXpBySource(profile, xpSourceCycleTask(taskId));
+            character = adjustCoins(character, -COINS_PER_TASK);
           }
           return {
             cycleTasks,
             profile,
+            character,
             weeks: recomputeWeekClosed(cycleTasks, s.weeks),
             levelUpEvent: levelUp,
           };
@@ -441,10 +800,11 @@ export const useAppStore = create<Store>()(
             }
             return { ...g, increments };
           });
-          const checked = checkGoalCompletion(goals, s.profile);
+          const checked = checkGoalCompletion(goals, s.profile, s.character);
           return {
             goals: checked.goals,
             profile: checked.profile,
+            character: checked.character,
             levelUpEvent: checked.levelUp,
             weeks: recomputeWeekClosed(s.cycleTasks, s.weeks),
           };
@@ -468,10 +828,11 @@ export const useAppStore = create<Store>()(
             withFirstLog.push("first_counter_log");
           }
           profile = { ...profile, achievements: withFirstLog };
-          const checked = checkGoalCompletion(goals, profile);
+          const checked = checkGoalCompletion(goals, profile, s.character);
           return {
             goals: checked.goals,
             profile: checked.profile,
+            character: checked.character,
             levelUpEvent: checked.levelUp ?? levelUp,
             weeks: recomputeWeekClosed(s.cycleTasks, s.weeks),
           };
@@ -498,10 +859,11 @@ export const useAppStore = create<Store>()(
           if (!achievements.includes("first_metric_log"))
             achievements.push("first_metric_log");
           profile = { ...profile, achievements };
-          const checked = checkGoalCompletion(goals, profile);
+          const checked = checkGoalCompletion(goals, profile, s.character);
           return {
             goals: checked.goals,
             profile: checked.profile,
+            character: checked.character,
             levelUpEvent: checked.levelUp ?? levelUp,
             weeks: recomputeWeekClosed(s.cycleTasks, s.weeks),
           };
@@ -524,9 +886,11 @@ export const useAppStore = create<Store>()(
               currentValue: metricCurrentAfterRemoving(measurements, start),
             };
           });
-          const checked = checkGoalCompletion(goals, s.profile);
+          const checked = checkGoalCompletion(goals, s.profile, s.character);
           return {
             goals: checked.goals,
+            profile: checked.profile,
+            character: checked.character,
             levelUpEvent: checked.levelUp,
             weeks: recomputeWeekClosed(s.cycleTasks, s.weeks),
           };
@@ -604,12 +968,19 @@ export const useAppStore = create<Store>()(
                 : wk
             ),
             profile,
+            character: adjustCoins(
+              s.character,
+              normalizeRace(s.character.race) === "knight"
+                ? Math.round(COINS_PER_WEEK * 1.4)
+                : COINS_PER_WEEK
+            ),
             levelUpEvent: levelUp,
             ...(shouldAdvance
               ? { activeWeek: week + 1, activeDay: 1 }
               : {}),
           };
         });
+        get().syncLevelRewards();
       },
 
       loadDemoData: () =>
@@ -664,7 +1035,12 @@ export const useAppStore = create<Store>()(
           profile: s.profile,
           theme: s.theme,
           hiddenSphereIds: s.hiddenSphereIds,
+          weekHiddenSphereIds: s.weekHiddenSphereIds,
+          weekFilterSphereId: s.weekFilterSphereId,
+          goalsFilterSphereId: s.goalsFilterSphereId,
           dayAssignments: s.dayAssignments,
+          character: s.character,
+          seasonFlame: s.seasonFlame,
         };
       },
 
@@ -694,12 +1070,17 @@ export const useAppStore = create<Store>()(
       name: STORAGE_KEY,
       version: DATA_VERSION,
       storage: createJSONStorage(() => localStorage),
-      migrate: (persisted, version) => {
-        const state = persisted as AppState;
-        if (version < DATA_VERSION) {
-          return migrateAppState(state);
-        }
-        return migrateAppState(state);
+      migrate: (persisted) =>
+        migrateAppState({
+          ...createInitialState(),
+          ...(persisted as AppState),
+        }),
+      merge: (persisted, current) => {
+        const migrated = migrateAppState({
+          ...createInitialState(),
+          ...(persisted as AppState),
+        });
+        return { ...current, ...migrated };
       },
       partialize: (state) => ({
         version: state.version,
@@ -715,7 +1096,12 @@ export const useAppStore = create<Store>()(
         profile: state.profile,
         theme: state.theme,
         hiddenSphereIds: state.hiddenSphereIds,
+        weekHiddenSphereIds: state.weekHiddenSphereIds,
+        weekFilterSphereId: state.weekFilterSphereId,
+        goalsFilterSphereId: state.goalsFilterSphereId,
         dayAssignments: state.dayAssignments,
+        character: state.character,
+        seasonFlame: state.seasonFlame,
       }),
     }
   )

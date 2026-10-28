@@ -76,7 +76,7 @@ export function OnboardingTour() {
   const finish = useCallback(() => {
     setTourNav(null);
     setTourComplete();
-    router.replace("/");
+    router.replace("/", { scroll: false });
   }, [router, setTourComplete]);
 
   const goPrev = useCallback(() => {
@@ -114,10 +114,16 @@ export function OnboardingTour() {
       return;
     }
     setTourNav(current.nav);
-    if (pathname !== current.route) {
+    const desired = current.search
+      ? `${current.route}?${current.search}`
+      : current.route;
+    const currentSearch =
+      typeof window !== "undefined" ? window.location.search.replace(/^\?/, "") : "";
+    const wantSearch = current.search ?? "";
+    if (pathname !== current.route || currentSearch !== wantSearch) {
       setTipReady(false);
       setHole(null);
-      router.replace(current.route);
+      router.replace(desired, { scroll: false });
       return;
     }
     void remeasure();

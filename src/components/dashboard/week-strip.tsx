@@ -1,6 +1,5 @@
 "use client";
 
-import { motion } from "framer-motion";
 import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { WeekData } from "@/types";
@@ -21,13 +20,13 @@ export function WeekStrip({ activeWeek, weeks, selectedWeek, onSelect }: Props) 
           const isPast = w.number < activeWeek;
           const isSelected = w.number === selectedWeek;
           return (
-            <motion.button
+            <button
               key={w.number}
               type="button"
-              whileTap={{ scale: 0.95 }}
               onClick={() => onSelect(w.number)}
+              title={`Неделя ${w.number}`}
               className={cn(
-                "relative flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-xl border text-sm font-semibold transition-colors md:h-16 md:w-full",
+                "relative flex h-14 w-14 shrink-0 touch-manipulation flex-col items-center justify-center rounded-xl border border-t-2 text-sm font-semibold transition-transform duration-75 active:scale-95 md:h-16 md:w-full",
                 isSelected
                   ? "border-primary bg-primary/20 text-primary shadow-[0_0_20px_rgba(52,211,153,0.25)]"
                   : "border-white/10 bg-card/40 hover:border-white/20",
@@ -42,7 +41,7 @@ export function WeekStrip({ activeWeek, weeks, selectedWeek, onSelect }: Props) 
                 <span>{w.number}</span>
               )}
               <span className="text-[9px] font-normal text-muted-foreground">нед</span>
-            </motion.button>
+            </button>
           );
         })}
       </div>

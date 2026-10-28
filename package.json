@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "audit:equipment": "npx tsx scripts/run-equipment-audit.ts"
   },
   "dependencies": {
     "@radix-ui/react-checkbox": "^1.1.2",
@@ -25,6 +26,7 @@
     "canvas-confetti": "^1.9.3",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
+    "exceljs": "^4.4.0",
     "framer-motion": "^11.11.9",
     "lucide-react": "^0.454.0",
     "next": "^14.2.18",

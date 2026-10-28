@@ -14,25 +14,18 @@ import { Label } from "@/components/ui/label";
 import { useAppStore } from "@/store/useAppStore";
 import { cn } from "@/lib/utils";
 import { Plus } from "lucide-react";
+import { DEFAULT_EXTRA_SPHERE_ICON } from "@/lib/sphere-extra-icons";
 import { SphereIconPicker } from "./sphere-icon-picker";
-import type { SphereIconKey } from "@/lib/sphere-icons";
 
-const COLORS = [
-  "#34d399",
-  "#a78bfa",
-  "#f472b6",
-  "#fbbf24",
-  "#60a5fa",
-  "#fb7185",
-  "#4ade80",
-  "#38bdf8",
-];
+import { SPHERE_COLORS } from "@/lib/sphere-colors";
+
+const COLORS = [...SPHERE_COLORS];
 
 export function SphereAddDialog() {
   const addSphere = useAppStore((s) => s.addSphere);
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
-  const [icon, setIcon] = useState<SphereIconKey>("custom");
+  const [icon, setIcon] = useState(DEFAULT_EXTRA_SPHERE_ICON);
   const [color, setColor] = useState(COLORS[0]);
 
   const submit = () => {
@@ -43,7 +36,7 @@ export function SphereAddDialog() {
       color,
     });
     setName("");
-    setIcon("custom");
+    setIcon(DEFAULT_EXTRA_SPHERE_ICON);
     setColor(COLORS[0]);
     setOpen(false);
   };
@@ -53,12 +46,12 @@ export function SphereAddDialog() {
       <DialogTrigger asChild>
         <Button size="sm" className="gap-1">
           <Plus className="h-4 w-4" />
-          Новая сфера
+          Новая цель
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Добавить сферу</DialogTitle>
+          <DialogTitle>Добавить цель</DialogTitle>
         </DialogHeader>
         <form
           className="space-y-4"

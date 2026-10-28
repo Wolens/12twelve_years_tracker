@@ -1,27 +1,29 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { useAppStore } from "@/store/useAppStore";
 import { todayISO } from "@/lib/gamification";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
-import { SphereFilterBar } from "@/components/spheres/sphere-filter-bar";
+import { SphereWeekFilter } from "@/components/spheres/sphere-week-filter";
 import { groupWeekTasksBySphere, visibleSpheres } from "@/lib/sphere-filters";
 import { goalsForDay } from "@/lib/day-plan";
 import { cn } from "@/lib/utils";
 import type { CycleTask } from "@/types";
-import { ArrowDown, ArrowUp } from "lucide-react";
-import { SphereGlyph } from "@/components/spheres/sphere-glyph";
+import { ArrowUp, ChevronDown } from "lucide-react";
+import { DailySeasonCard } from "@/components/engagement/daily-season-card";
+import { TodayQuestRow } from "@/components/today/today-quest-row";
+import { TaskRewardFlash, type TaskRewardFlashPayload } from "@/components/today/task-reward-flash";
+import { previewTaskCompletionRewards } from "@/lib/rpg/task-rewards";
 
 export default function TodayPage() {
-  const goals = useAppStore((s) => s.goals);
   const cycleTasks = useAppStore((s) => s.cycleTasks);
   const spheres = useAppStore((s) => s.spheres);
   const hiddenSphereIds = useAppStore((s) => s.hiddenSphereIds);
+  const weekFilterSphereId = useAppStore((s) => s.weekFilterSphereId);
   const activeWeek = useAppStore((s) => s.activeWeek);
   const activeDay = useAppStore((s) => s.activeDay);
   const dayAssignments = useAppStore((s) => s.dayAssignments);
+  const profile = useAppStore((s) => s.profile);
   const toggleCycleTask = useAppStore((s) => s.toggleCycleTask);
   const assignTaskToDayPlan = useAppStore((s) => s.assignTaskToDayPlan);
   const unassignTaskFromDayPlan = useAppStore((s) => s.unassignTaskFromDayPlan);
@@ -29,6 +31,10 @@ export default function TodayPage() {
   const weeks = useAppStore((s) => s.weeks);
 
   const [viewWeek, setViewWeek] = useState(activeWeek);
+  const [weekPoolOpen, setWeekPoolOpen] = useState(false);
+  const [rewardFlash, setRewardFlash] = useState<TaskRewardFlashPayload | null>(null);
+
+  const dismissReward = useCallback(() => setRewardFlash(null), []);
 
   useEffect(() => {
     setViewWeek(activeWeek);
@@ -39,33 +45,33 @@ export default function TodayPage() {
   const selectedDay = activeDay;
   const viewingPastOrFuture = viewWeek !== activeWeek;
 
-  const poolGroups = groupWeekTasksBySphere(cycleTasks, spheres, week, hiddenSphereIds);
-
   const assignedIds = goalsForDay(dayAssignments, week, selectedDay);
   const assignedTasks = assignedIds
     .map((id) => cycleTasks.find((t) => t.id === id))
     .filter((t): t is CycleTask => !!t);
 
-  const assignedBySphere = useMemo(() => {
-    const visible = visibleSpheres(spheres, hiddenSphereIds);
-    return visible
-      .map((sphere) => ({
-        sphere,
-        tasks: assignedTasks.filter((t) => t.sphereId === sphere.id),
-      }))
-      .filter((g) => g.tasks.length > 0);
-  }, [assignedTasks, spheres, hiddenSphereIds]);
+  const activeSphere = spheres.find((s) => s.id === weekFilterSphereId);
 
-  const unassigned = useMemo(() => {
+  const assignedForGoal = useMemo(() => {
+    if (!weekFilterSphereId) return assignedTasks;
+    return assignedTasks.filter((t) => t.sphereId === weekFilterSphereId);
+  }, [assignedTasks, weekFilterSphereId]);
+
+  const weekPoolTasks = useMemo(() => {
     const assignedAnyDay = new Set<string>();
     for (let d = 1; d <= 7; d++) {
       goalsForDay(dayAssignments, week, d).forEach((id) => assignedAnyDay.add(id));
     }
-    return poolGroups.map((grp) => ({
-      ...grp,
-      tasks: grp.tasks.filter((t) => !assignedAnyDay.has(t.id)),
-    }));
-  }, [poolGroups, dayAssignments, week]);
+    const groups = groupWeekTasksBySphere(
+      cycleTasks,
+      spheres,
+      week,
+      hiddenSphereIds,
+      weekFilterSphereId
+    );
+    const tasks = groups[0]?.tasks ?? [];
+    return tasks.filter((t) => !assignedAnyDay.has(t.id));
+  }, [cycleTasks, spheres, week, hiddenSphereIds, weekFilterSphereId, dayAssignments]);
 
   const onDragStart = (taskId: string) => (e: React.DragEvent) => {
     e.dataTransfer.setData("taskId", taskId);
@@ -85,190 +91,169 @@ export default function TodayPage() {
   };
 
   const preventDrag = (e: React.DragEvent) => e.preventDefault();
+  const poolCount = weekPoolTasks.length;
+  const prettyDate = new Date(`${today}T12:00:00`).toLocaleDateString("ru-RU", {
+    day: "numeric",
+    month: "long",
+  });
+  const weekClosed = weeks.find((w) => w.number === viewWeek)?.closed;
 
   return (
-    <div className="space-y-4 px-4 pt-4 pb-8">
-      <header data-tour="today-board">
+    <div className="mx-auto max-w-lg space-y-4 px-4 pb-8">
+      <TaskRewardFlash payload={rewardFlash} onDismiss={dismissReward} />
+      <header data-tour="today-board" className="space-y-1">
         <h1 className="font-display text-2xl font-bold">Сегодня</h1>
-        <p className="text-sm text-muted-foreground">
-          {today}
-          {viewingPastOrFuture
-            ? ` · просмотр недели ${viewWeek} (текущая ${activeWeek})`
-            : ` · рабочая неделя ${activeWeek}`}
-          {" · "}день {selectedDay}
-        </p>
+        <p className="text-sm text-muted-foreground">{prettyDate}</p>
+        <DailySeasonCard />
       </header>
 
-      <div className="space-y-2">
-        <div className="flex items-center justify-between gap-2">
-          <p className="text-xs font-medium text-muted-foreground">Неделя цикла</p>
-          {viewingPastOrFuture && (
+      <div className="flex items-center justify-between gap-2">
+        <button
+          type="button"
+          className="flex h-9 w-9 items-center justify-center rounded-full text-lg text-muted-foreground hover:bg-white/5 disabled:opacity-30"
+          onClick={() => setViewWeek((n) => Math.max(1, n - 1))}
+          disabled={viewWeek <= 1}
+          aria-label="Предыдущая неделя"
+        >
+          ‹
+        </button>
+        <div className="text-center">
+          <p className="text-sm font-medium">Неделя {week}</p>
+          {viewingPastOrFuture ? (
             <button
               type="button"
-              className="text-xs text-primary hover:underline"
+              className="text-[11px] text-primary"
               onClick={() => setViewWeek(activeWeek)}
             >
-              К текущей ({activeWeek})
+              К текущей · неделя {activeWeek}
             </button>
+          ) : (
+            <p className="text-[11px] text-muted-foreground">
+              {weekClosed ? "Пролёт наверх достроен" : "Пролёт наверх ещё открыт"}
+            </p>
           )}
         </div>
-        <div className="flex gap-1 overflow-x-auto rounded-xl border border-white/10 bg-card/40 p-1">
-          {Array.from({ length: 12 }, (_, i) => i + 1).map((n) => {
-            const closed = weeks.find((w) => w.number === n)?.closed;
-            const isCurrent = n === activeWeek;
-            const isView = n === viewWeek;
-            return (
-              <button
-                key={n}
-                type="button"
-                onClick={() => setViewWeek(n)}
-                className={cn(
-                  "relative shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors",
-                  isView
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:text-foreground",
-                  isCurrent && !isView && "ring-1 ring-primary/50"
-                )}
-                title={
-                  isCurrent
-                    ? "Текущая рабочая неделя"
-                    : closed
-                      ? "Неделя закрыта"
-                      : undefined
-                }
-              >
-                {n}
-                {isCurrent && (
-                  <span className="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                )}
-              </button>
-            );
-          })}
-        </div>
+        <button
+          type="button"
+          className="flex h-9 w-9 items-center justify-center rounded-full text-lg text-muted-foreground hover:bg-white/5 disabled:opacity-30"
+          onClick={() => setViewWeek((n) => Math.min(12, n + 1))}
+          disabled={viewWeek >= 12}
+          aria-label="Следующая неделя"
+        >
+          ›
+        </button>
       </div>
 
-      <div className="flex flex-col gap-4 lg:flex-row">
-        <div className="min-w-0 flex-1 space-y-4">
-          <div className="flex gap-1 overflow-x-auto rounded-xl border border-white/10 bg-card/40 p-1">
-            {Array.from({ length: 7 }, (_, i) => i + 1).map((day) => (
-              <button
-                key={day}
-                type="button"
-                onClick={() => setActiveDay(day)}
-                className={cn(
-                  "shrink-0 rounded-lg px-3 py-2 text-xs font-medium transition-colors",
-                  selectedDay === day
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                День {day}
-              </button>
-            ))}
-          </div>
+      <div className="grid grid-cols-7 gap-1">
+        {Array.from({ length: 7 }, (_, i) => i + 1).map((day) => (
+          <button
+            key={day}
+            type="button"
+            onClick={() => setActiveDay(day)}
+            className={cn(
+              "rounded-xl py-2 text-sm font-medium transition-colors",
+              selectedDay === day
+                ? "bg-primary text-primary-foreground"
+                : "bg-card/40 text-muted-foreground hover:text-foreground"
+            )}
+          >
+            {day}
+          </button>
+        ))}
+      </div>
 
-          <Card
+      <SphereWeekFilter className="mx-auto" />
+
+      <div className="space-y-4">
+          <div
             onDragOver={preventDrag}
             onDrop={onDropDay}
-            className="border-dashed border-primary/30"
+            className="space-y-2 rounded-xl border border-white/10 bg-card/20 p-2"
           >
-            <CardHeader>
-              <CardTitle className="text-lg">День {selectedDay} — план</CardTitle>
-            </CardHeader>
-            <CardContent className="min-h-[120px] space-y-4">
-              {assignedBySphere.length === 0 && (
-                <p className="text-sm text-muted-foreground">
-                  Нажмите «В план» у задачи ниже — или перетащите её сюда
-                </p>
-              )}
-              {assignedBySphere.map(({ sphere, tasks }) => (
-                <div key={sphere.id} className="space-y-2">
-                  <h3 className="flex items-center gap-1.5 text-xs font-semibold">
-                    <SphereGlyph icon={sphere.icon} color={sphere.color} size="xs" />
-                    <span style={{ color: sphere.color }}>{sphere.name}</span>
-                  </h3>
-                  {tasks.map((task) => {
-                    const parent = goals.find((g) => g.id === task.goalId);
-                    return (
-                      <div
-                        key={task.id}
-                        draggable
-                        onDragStart={onDragStart(task.id)}
-                        className="flex cursor-grab items-center gap-2 rounded-lg border border-white/10 bg-background/40 p-2 active:cursor-grabbing"
-                        style={{ borderLeftColor: sphere.color, borderLeftWidth: 3 }}
-                      >
-                        <Checkbox
-                          checked={task.done}
-                          onCheckedChange={() => toggleCycleTask(task.id)}
-                        />
-                        <div className="min-w-0 flex-1">
-                          <p
-                            className={cn(
-                              "text-sm",
-                              task.done && "text-muted-foreground line-through"
-                            )}
-                          >
-                            {task.title}
-                          </p>
-                          <p className="text-[10px] text-muted-foreground">
-                            Цель: {parent?.title}
-                          </p>
-                        </div>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-8 shrink-0 px-2 text-xs"
-                          onPointerDown={(e) => e.stopPropagation()}
-                          onClick={() => unassignTaskFromDayPlan(task.id, week)}
-                        >
-                          <ArrowDown className="h-3.5 w-3.5" />
-                          В неделю
-                        </Button>
-                      </div>
-                    );
-                  })}
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        </div>
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              День {selectedDay}
+            </p>
+            {assignedForGoal.length === 0 && (
+              <p className="py-4 text-center text-sm text-muted-foreground">
+                {activeSphere
+                  ? "На этот день задач нет. Раскрой список ниже и добавь из недели."
+                  : "Выберите цель вкладкой выше."}
+              </p>
+            )}
+            {assignedForGoal.map((task) => {
+              const sphere = spheres.find((s) => s.id === task.sphereId);
+              if (!sphere) return null;
+              return (
+                <TodayQuestRow
+                  key={task.id}
+                  task={task}
+                  sphere={sphere}
+                  onDragStart={onDragStart(task.id)}
+                  onComplete={() => {
+                    if (task.done) return;
+                    const preview = previewTaskCompletionRewards(profile.level, null, 100);
+                    toggleCycleTask(task.id);
+                    setRewardFlash({
+                      title: task.title,
+                      xp: preview.xp,
+                      coins: preview.coins,
+                    });
+                  }}
+                  onUndo={() => {
+                    if (!task.done) return;
+                    toggleCycleTask(task.id);
+                  }}
+                  onUnassign={() => unassignTaskFromDayPlan(task.id, week)}
+                />
+              );
+            })}
+          </div>
 
-        <aside
-          className="w-full shrink-0 space-y-3 lg:w-72"
-          onDragOver={preventDrag}
-          onDrop={onDropToPool}
-        >
-          <SphereFilterBar variant="inline" />
-          <p className="text-sm font-medium text-muted-foreground">
-            Задачи недели {week}
-          </p>
-          <p className="text-[10px] text-muted-foreground">
-            «В план» добавляет задачу в день {selectedDay}. «В неделю» возвращает обратно.
-          </p>
-          {unassigned.every((g) => g.tasks.length === 0) && (
-            <div className="glass-card border border-dashed border-white/15 p-4 text-center text-xs text-muted-foreground">
-              Зона сброса: перетащите задачу из плана дня
-            </div>
-          )}
-          {unassigned.map(({ sphere, tasks }) =>
-            tasks.length === 0 ? null : (
-              <div
-                key={sphere.id}
-                className="glass-card p-3"
-                onDragOver={preventDrag}
-                onDrop={onDropToPool}
-              >
-                <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold">
-                  <SphereGlyph icon={sphere.icon} color={sphere.color} size="xs" />
-                  <span style={{ color: sphere.color }}>{sphere.name}</span>
-                </p>
-                <div className="space-y-2">
-                  {tasks.map((t) => (
+          <div className="overflow-hidden rounded-2xl border border-white/10 bg-card/30">
+            <button
+              type="button"
+              aria-expanded={weekPoolOpen}
+              onClick={() => setWeekPoolOpen((open) => !open)}
+              className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm"
+            >
+              <ChevronDown
+                className={cn(
+                  "h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200",
+                  weekPoolOpen && "rotate-180"
+                )}
+                aria-hidden
+              />
+              <span className="min-w-0 flex-1 truncate">
+                Задачи недели
+                {activeSphere ? ` · ${activeSphere.name}` : ""}
+              </span>
+              <span className="shrink-0 text-xs text-muted-foreground">{poolCount}</span>
+            </button>
+            <div
+              className={cn(
+                "grid transition-[grid-template-rows] duration-200 ease-out",
+                weekPoolOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+              )}
+            >
+              <div className="min-h-0 overflow-hidden">
+                <div
+                  className="space-y-2 border-t border-white/10 px-3 pb-3 pt-2"
+                  onDragOver={preventDrag}
+                  onDrop={onDropToPool}
+                >
+                  {poolCount === 0 && (
+                    <p className="py-4 text-center text-sm text-muted-foreground">
+                      {hiddenSphereIds.includes(weekFilterSphereId)
+                        ? "Эта цель скрыта — выбери другую вкладку сверху."
+                        : "Свободных задач на эту неделю нет. Добавь в «Цели» или «12 недель»."}
+                    </p>
+                  )}
+                  {weekPoolTasks.map((t) => (
                     <div
                       key={t.id}
                       draggable
                       onDragStart={onDragStart(t.id)}
-                      className="flex cursor-grab items-center gap-2 rounded-md border border-white/10 bg-background/50 px-2 py-2 active:cursor-grabbing"
+                      className="flex cursor-grab items-center gap-2 rounded-xl border border-white/10 bg-background/40 px-3 py-2.5 active:cursor-grabbing"
                     >
                       <p className="min-w-0 flex-1 text-sm leading-snug">{t.title}</p>
                       <Button
@@ -279,15 +264,14 @@ export default function TodayPage() {
                         onClick={() => assignTaskToDayPlan(t.id, week, selectedDay)}
                       >
                         <ArrowUp className="h-3.5 w-3.5" />
-                        В план
+                        В день
                       </Button>
                     </div>
                   ))}
                 </div>
               </div>
-            )
-          )}
-        </aside>
+            </div>
+          </div>
       </div>
     </div>
   );

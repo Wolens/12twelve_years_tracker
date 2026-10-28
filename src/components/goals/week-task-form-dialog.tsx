@@ -22,7 +22,8 @@ import type { CycleTask } from "@/types";
 
 type Props = {
   sphereId: string;
-  week: number;
+  /** Если задана — неделя фиксирована (экран «12 недель»). Иначе можно выбрать 1–12. */
+  week?: number;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   editTask?: CycleTask | null;
@@ -30,43 +31,41 @@ type Props = {
 
 export function WeekTaskFormDialog({
   sphereId,
-  week,
+  week: fixedWeek,
   open,
   onOpenChange,
   editTask,
 }: Props) {
-  const goals = useAppStore((s) => s.goals);
   const addCycleTask = useAppStore((s) => s.addCycleTask);
   const updateCycleTask = useAppStore((s) => s.updateCycleTask);
+  const activeWeek = useAppStore((s) => s.activeWeek);
 
   const effectiveSphereId = editTask?.sphereId ?? sphereId;
-  const sphereGoals = goals.filter((g) => g.sphereId === effectiveSphereId);
-  const [goalId, setGoalId] = useState(sphereGoals[0]?.id ?? "");
+  const [taskWeek, setTaskWeek] = useState(fixedWeek ?? activeWeek);
   const [title, setTitle] = useState("");
 
   const isEdit = Boolean(editTask);
+  const weekLocked = fixedWeek != null && !isEdit;
 
   useEffect(() => {
     if (!open) return;
     if (editTask) {
-      setGoalId(editTask.goalId);
+      setTaskWeek(editTask.week);
       setTitle(editTask.title);
       return;
     }
-    const list = goals.filter((g) => g.sphereId === sphereId);
-    setGoalId(list[0]?.id ?? "");
+    setTaskWeek(fixedWeek ?? activeWeek);
     setTitle("");
-  }, [open, sphereId, goals, editTask]);
+  }, [open, fixedWeek, activeWeek, editTask]);
 
   const submit = () => {
-    if (!goalId || !title.trim()) return;
+    if (!title.trim() || taskWeek < 1 || taskWeek > 12) return;
     if (editTask) {
-      updateCycleTask(editTask.id, { goalId, title: title.trim() });
+      updateCycleTask(editTask.id, { title: title.trim(), week: taskWeek });
     } else {
       addCycleTask({
-        goalId,
-        sphereId,
-        week,
+        sphereId: effectiveSphereId,
+        week: taskWeek,
         title: title.trim(),
       });
     }
@@ -79,7 +78,7 @@ export function WeekTaskFormDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>
-            {isEdit ? "Редактировать задачу" : `Задача на неделю ${week}`}
+            {isEdit ? "Редактировать задачу" : `Задача · неделя ${taskWeek}`}
           </DialogTitle>
         </DialogHeader>
         <form
@@ -89,38 +88,37 @@ export function WeekTaskFormDialog({
             submit();
           }}
         >
-          {sphereGoals.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              Сначала добавьте цель на период в разделе «Цели» для этой сферы.
-            </p>
-          ) : (
-            <>
-              <div>
-                <Label>Цель периода</Label>
-                <Select value={goalId} onValueChange={setGoalId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Выберите цель" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {sphereGoals.map((g) => (
-                      <SelectItem key={g.id} value={g.id}>{g.title}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Задача</Label>
-                <Input
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Что сделать на этой неделе"
-                />
-              </div>
-              <Button type="submit" className="w-full">
-                {isEdit ? "Сохранить" : "Добавить"}
-              </Button>
-            </>
+          {!weekLocked && (
+            <div>
+              <Label>Неделя</Label>
+              <Select
+                value={String(taskWeek)}
+                onValueChange={(v) => setTaskWeek(Number(v))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Array.from({ length: 12 }, (_, i) => i + 1).map((w) => (
+                    <SelectItem key={w} value={String(w)}>
+                      Неделя {w}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           )}
+          <div>
+            <Label>Задача</Label>
+            <Input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Что сделать на этой неделе"
+            />
+          </div>
+          <Button type="submit" className="w-full" disabled={!title.trim()}>
+            {isEdit ? "Сохранить" : "Добавить"}
+          </Button>
         </form>
       </DialogContent>
     </Dialog>

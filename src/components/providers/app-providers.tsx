@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { useAppStore } from "@/store/useAppStore";
 import { useAuthStore } from "@/store/useAuthStore";
 import { LevelUpHandler } from "@/components/gamification/level-up-handler";
+import { SoundProvider } from "@/components/audio/sound-provider";
 import { Toaster } from "@/components/ui/toaster";
 import { achievementsNeedSync, syncProfileAchievements } from "@/lib/achievements";
 import {
@@ -15,6 +16,7 @@ import {
   resetCloudHydrationGate,
 } from "@/lib/cloud-hydration";
 import { repairAppState, stateNeedsRepair } from "@/lib/app-state-health";
+import { toast } from "@/components/ui/use-toast";
 
 export function AppProviders({ children }: { children: React.ReactNode }) {
   const theme = useAppStore((s) => s.theme);
@@ -25,6 +27,8 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     document.documentElement.classList.toggle("light", theme === "light");
     document.documentElement.classList.toggle("dark", theme !== "light");
+    const meta = document.querySelector('meta[name="theme-color"]');
+    meta?.setAttribute("content", theme === "light" ? "#f4f6f9" : "#0a0a0f");
   }, [theme]);
 
   useEffect(() => {
@@ -58,6 +62,8 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
       if (stateNeedsRepair(state)) {
         useAppStore.getState().repairStateFromLedger();
       }
+      useAppStore.getState().processSeasonFlameOnBoot();
+      useAppStore.getState().syncLevelRewards();
       return;
     }
 
@@ -69,14 +75,27 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
     resetCloudHydrationGate();
     let cancelled = false;
     (async () => {
-      await hydrateAppStateFromCloud(userId);
-      const state = useAppStore.getState();
-      if (stateNeedsRepair(state)) {
-        useAppStore.setState(repairAppState(state));
-      }
-      if (!cancelled) {
-        hydratedForUser.current = userId;
-        markCloudHydrationDone();
+      try {
+        await hydrateAppStateFromCloud(userId);
+        const state = useAppStore.getState();
+        if (stateNeedsRepair(state)) {
+          useAppStore.setState(repairAppState(state));
+        }
+        const decay = useAppStore.getState().processSeasonFlameOnBoot();
+        useAppStore.getState().syncLevelRewards();
+        if (decay.missedDays > 0 && !cancelled) {
+          toast({
+            title: "Здоровье снизилось",
+            description: `Пропущено дней: ${decay.missedDays}. Открой день, чтобы восстановить.`,
+          });
+        }
+      } catch (err) {
+        console.error("[cloud-sync] hydrate failed", err);
+      } finally {
+        if (!cancelled) {
+          hydratedForUser.current = userId;
+          markCloudHydrationDone();
+        }
       }
     })();
 
@@ -114,10 +133,10 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
   }, [userId]);
 
   return (
-    <>
+    <SoundProvider>
       {children}
       <Toaster />
       <LevelUpHandler />
-    </>
+    </SoundProvider>
   );
 }

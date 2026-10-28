@@ -9,11 +9,16 @@ import { xpProgressInLevel, rankTitle } from "@/lib/gamification";
 import { ACHIEVEMENTS_META } from "@/lib/constants";
 import type { AchievementId } from "@/types";
 import { AuthPanel } from "@/components/profile/auth-panel";
-import { AvatarPicker } from "@/components/profile/avatar-picker";
 import { XpHistoryTrigger } from "@/components/profile/xp-history-trigger";
+import { CharacterPortrait } from "@/components/hero/character-portrait";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { normalizeCharacter } from "@/lib/rpg/normalize-game";
+import { CoinBadge } from "@/components/hero/coin-badge";
 
 export default function ProfilePage() {
   const profile = useAppStore((s) => s.profile);
+  const character = normalizeCharacter(useAppStore((s) => s.character));
   const updateProfile = useAppStore((s) => s.updateProfile);
   const xp = xpProgressInLevel(profile.xp);
 
@@ -24,8 +29,15 @@ export default function ProfilePage() {
       <h1 className="font-display text-2xl font-bold">Профиль</h1>
       <Card data-tour="profile-xp">
         <CardContent className="pt-6 text-center">
-          <AvatarPicker />
-          <p className="mt-2 text-sm text-muted-foreground">Нажмите, чтобы выбрать аватар</p>
+          <div className="flex justify-center">
+            <CharacterPortrait size="lg" />
+          </div>
+          <div className="mt-3 flex justify-center">
+            <CoinBadge amount={character.coins} />
+          </div>
+          <Link href="/hero" scroll={false} className="mt-2 inline-block">
+            <Button size="sm" variant="outline">Открыть героя</Button>
+          </Link>
           <div className="mt-4 space-y-2 text-left">
             <Label>Имя</Label>
             <Input

@@ -1,9 +1,11 @@
 export type TourStep = {
   id: string;
   route: string;
+  /** Query string without leading ? (e.g. tab=goals) */
+  search?: string;
   selector: string;
   /** Matching bottom-nav item to lift above the overlay */
-  nav: "weeks" | "today" | "goals" | "stats" | "profile";
+  nav: "weeks" | "today" | "hero" | "stats" | "profile";
   title: string;
   text: string;
 };
@@ -14,16 +16,17 @@ export const TOUR_STEPS: TourStep[] = [
     route: "/",
     selector: '[data-tour="week-map"]',
     nav: "weeks",
-    title: "Карта сезона",
+    title: "Карта 12 недель",
     text: "12 клеток — 12 недель. Выбери неделю, поставь мини-задачи и закрывай их по одной.",
   },
   {
-    id: "goals-board",
-    route: "/goals",
-    selector: '[data-tour="goals-board"]',
-    nav: "goals",
-    title: "Цели сезона",
-    text: "Сюда ставишь то, чего хочешь добиться за 12 недель: счётчики, метрики или разовые цели.",
+    id: "hero-goals",
+    route: "/hero",
+    search: "tab=goals",
+    selector: '[data-tour="hero-goals"]',
+    nav: "hero",
+    title: "Цели на 12 недель",
+    text: "Стоит заглянуть в «Герой → Цели»: опиши, о чём цель, и при желании укажи начальное и целевое число. Задачи по неделям ставишь на «12 недель».",
   },
   {
     id: "today-board",
@@ -32,6 +35,14 @@ export const TOUR_STEPS: TourStep[] = [
     nav: "today",
     title: "Сегодня",
     text: "Каждый день открывай эту вкладку: здесь собирается то, что нужно сделать прямо сейчас.",
+  },
+  {
+    id: "stats-board",
+    route: "/stats",
+    selector: '[data-tour="stats-board"]',
+    nav: "stats",
+    title: "Статистика",
+    text: "Прогресс цикла, задачи по целям, XP за дни — всё в одном месте. Числовые цели обновляй в «Герой → Цели».",
   },
   {
     id: "profile-xp",

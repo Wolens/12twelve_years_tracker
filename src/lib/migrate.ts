@@ -5,7 +5,9 @@ import { getCurrentWeekNumber } from "./gamification";
 import { normalizeActiveWeek } from "./active-week";
 import { syncProfileAchievements } from "./achievements";
 import { migrateProfileXp } from "./xp-ledger";
-import { normalizeSphereIcon } from "./sphere-icons";
+import { preserveSphereIcon } from "./sphere-icons";
+import { normalizeCharacter, normalizeSeasonFlame } from "./rpg/normalize-game";
+import { resolveSphereFilterId } from "./sphere-filter-default";
 
 type LegacyGoal = Goal & {
   week?: number;
@@ -127,24 +129,48 @@ export function migrateAppState(
     profile: profileAfterXp,
   } as AppState;
 
-  const profile = syncProfileAchievements(draft);
+  const profileSynced = syncProfileAchievements(draft);
+  const profile = {
+    ...profileSynced,
+    lastRitualDate: profileSynced.lastRitualDate ?? null,
+    dailyQuestClaimDate: profileSynced.dailyQuestClaimDate ?? null,
+  };
 
   const spheres = (base.spheres ?? []).map((s) => ({
     ...s,
-    icon: normalizeSphereIcon(s.icon),
+    icon: preserveSphereIcon(s.icon),
   }));
+
+  const character = normalizeCharacter(base.character);
+  const seasonFlame = normalizeSeasonFlame(base.seasonFlame);
+
+  const goalsV11 = (base.version ?? 0) < 11 ? [] : goals;
+
+  const weekFilterSphereId = resolveSphereFilterId(
+    spheres,
+    base.weekFilterSphereId as string | null | undefined
+  );
+  const goalsFilterSphereId = resolveSphereFilterId(
+    spheres,
+    base.goalsFilterSphereId as string | null | undefined
+  );
 
   return {
     ...base,
     version: DATA_VERSION,
     hiddenSphereIds: base.hiddenSphereIds ?? [],
+    weekHiddenSphereIds: base.weekHiddenSphereIds ?? [],
     dayAssignments: base.dayAssignments ?? {},
     spheres,
-    goals,
+    goals: goalsV11,
     cycleTasks,
     weeks,
     activeWeek,
     activeDay: Math.min(7, Math.max(1, base.activeDay ?? 1)),
     profile,
+    character,
+    seasonFlame,
+    weekFilterSphereId,
+    goalsFilterSphereId,
   };
 }

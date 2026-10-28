@@ -1,28 +1,22 @@
-"use client";
-
-import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
-
 export function CycleRadial({ percent }: { percent: number }) {
-  const data = [
-    { name: "done", value: percent },
-    { name: "rest", value: 100 - percent },
-  ];
+  const p = Math.max(0, Math.min(100, percent));
+  const r = 70;
+  const c = 2 * Math.PI * r;
+  const dash = (p / 100) * c;
+
   return (
-    <ResponsiveContainer width="100%" height={200}>
-      <PieChart>
-        <Pie
-          data={data}
-          innerRadius={60}
-          outerRadius={80}
-          startAngle={90}
-          endAngle={-270}
-          dataKey="value"
-          stroke="none"
-        >
-          <Cell fill="#34d399" />
-          <Cell fill="rgba(255,255,255,0.08)" />
-        </Pie>
-      </PieChart>
-    </ResponsiveContainer>
+    <svg viewBox="0 0 200 200" className="mx-auto h-[200px] w-full max-w-[200px]" aria-hidden>
+      <circle cx="100" cy="100" r={r} fill="none" className="stroke-foreground/10" strokeWidth="20" />
+      <circle
+        cx="100"
+        cy="100"
+        r={r}
+        fill="none"
+        stroke="#34d399"
+        strokeWidth="20"
+        strokeDasharray={`${dash} ${c - dash}`}
+        transform="rotate(-90 100 100)"
+      />
+    </svg>
   );
 }

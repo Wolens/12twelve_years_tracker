@@ -1,0 +1,47 @@
+/** Цвета на спрайте героя — совпадают с иконками предметов. */
+export const ITEM_SPRITE_COLOR: Record<string, string> = {
+  tunic_worn: "#cbb89a",
+  pants_worn: "#7c654c",
+  cap_trainee: "#2563eb",
+  beret_ink: "#1e293b",
+  band_cloth: "#dc2626",
+  veil_dusk: "#6366f1",
+  hood_focus: "#312e81",
+  circlet_thin: "#fcd34d",
+  crown_week: "#fbbf24",
+  helm_watch: "#64748b",
+  shirt_basic: "#94a3b8",
+  jacket_road: "#78350f",
+  vest_runner: "#ea580c",
+  cloak_fog: "#475569",
+  dress_evening: "#be185d",
+  robe_quiet: "#4c1d95",
+  armor_season: "#94a3b8",
+  pants_basic: "#1e3a8a",
+  shorts_warm: "#ca8a04",
+  skirt_hem: "#7c3aed",
+  sandals_dust: "#a16207",
+  boots_sprint: "#44403c",
+  greaves_iron: "#71717a",
+  weapon_staff: "#22c55e",
+  weapon_dagger: "#cbd5e1",
+  weapon_sword: "#e2e8f0",
+  weapon_bow: "#92400e",
+  weapon_axe: "#94a3b8",
+  weapon_spear: "#cbd5e1",
+  weapon_mace: "#71717a",
+  weapon_blade: "#e0f2fe",
+  weapon_wand: "#a78bfa",
+  weapon_relic: "#fde68a",
+  charm_leaf: "#22c55e",
+  charm_fang: "#f8fafc",
+  charm_moon: "#e0e7ff",
+  charm_ring: "#fbbf24",
+  charm_flame: "#f97316",
+  charm_star: "#fde047",
+};
+
+export function spriteColorForItem(itemId: string | undefined, fallback: string): string {
+  if (!itemId) return fallback;
+  return ITEM_SPRITE_COLOR[itemId] ?? fallback;
+}

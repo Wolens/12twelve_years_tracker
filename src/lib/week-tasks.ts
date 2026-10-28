@@ -13,9 +13,9 @@ export function groupTasksByGoal(
       orphan.push(t);
       continue;
     }
-    const list = map.get(t.goalId) ?? [];
+    const list = map.get(goal.id) ?? [];
     list.push(t);
-    map.set(t.goalId, list);
+    map.set(goal.id, list);
   }
 
   const groups: { goal: Goal | null; tasks: CycleTask[] }[] = goals

@@ -15,9 +15,11 @@ import { useRouter } from "next/navigation";
 import { SeasonMap } from "@/components/onboarding/season-map";
 import { SphereGlyph } from "@/components/spheres/sphere-glyph";
 import { SphereIconPicker } from "@/components/spheres/sphere-icon-picker";
-import type { SphereIconKey } from "@/lib/sphere-icons";
+import { DEFAULT_EXTRA_SPHERE_ICON } from "@/lib/sphere-extra-icons";
 
-const COLORS = ["#34d399", "#a78bfa", "#f472b6", "#fbbf24", "#60a5fa", "#fb7185"];
+import { SPHERE_COLORS } from "@/lib/sphere-colors";
+
+const COLORS = [...SPHERE_COLORS];
 
 type Stage = "welcome" | "spheres";
 
@@ -31,7 +33,7 @@ export default function OnboardingPage() {
     const state = useAppStore.getState();
     if (!hasUserProgress(state)) return;
     repairStateFromLedger();
-    router.replace("/");
+    router.replace("/", { scroll: false });
   }, [repairStateFromLedger, router]);
 
   const defaults = useMemo(
@@ -45,7 +47,7 @@ export default function OnboardingPage() {
 
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
   const [customName, setCustomName] = useState("");
-  const [customIcon, setCustomIcon] = useState<SphereIconKey>("custom");
+  const [customIcon, setCustomIcon] = useState(DEFAULT_EXTRA_SPHERE_ICON);
   const [customColor, setCustomColor] = useState(COLORS[0]);
   const [customSpheres, setCustomSpheres] = useState<Sphere[]>([]);
   const [showCustom, setShowCustom] = useState(false);
@@ -79,7 +81,7 @@ export default function OnboardingPage() {
       ...customSpheres.filter((s) => selected.has(s.id)),
     ];
     completeOnboarding(chosen);
-    router.replace("/");
+    router.replace("/", { scroll: false });
   };
 
   return (
@@ -109,7 +111,7 @@ export default function OnboardingPage() {
                 transition={{ delay: 0.1 }}
                 className="text-center text-xs font-medium uppercase tracking-[0.28em] text-primary"
               >
-                не год — сезон
+                не год — 12 недель
               </motion.p>
               <motion.h1
                 initial={{ opacity: 0, y: 12 }}
@@ -125,7 +127,7 @@ export default function OnboardingPage() {
                 transition={{ delay: 0.28 }}
                 className="mx-auto mt-4 max-w-sm text-center text-base leading-relaxed text-muted-foreground"
               >
-                Сжать год в один сезон. Поставить цели, закрывать недели,
+                Сжать год в 12 недель. Поставить цели, закрывать недели,
                 качать уровень — за то, что сделал, а не за то, что планировал.
               </motion.p>
 
@@ -146,7 +148,7 @@ export default function OnboardingPage() {
               >
                 {[
                   ["12 недель", "вместо года"],
-                  ["Цели", "на весь сезон"],
+                  ["Цели", "в «Герое»"],
                   ["XP", "за действия"],
                 ].map(([k, v]) => (
                   <li
@@ -192,13 +194,13 @@ export default function OnboardingPage() {
             <div className="flex-1 space-y-6">
               <div>
                 <p className="text-xs font-medium uppercase tracking-[0.22em] text-primary">
-                  настройка сезона
+                  настройка круга
                 </p>
                 <h1 className="font-display mt-2 text-3xl font-bold tracking-tight">
                   Что прокачиваем?
                 </h1>
                 <p className="mt-2 text-muted-foreground">
-                  Отметь направления этого сезона. Потом можно добавить или убрать —
+                  Отметь направления этих 12 недель. Потом можно добавить или убрать —
                   ничего не навсегда.
                 </p>
               </div>
@@ -279,6 +281,7 @@ export default function OnboardingPage() {
                             value={customIcon}
                             color={customColor}
                             onChange={setCustomIcon}
+                            emojiOnly
                           />
                         </div>
                         <div>

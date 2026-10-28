@@ -3,20 +3,20 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { CalendarDays, BarChart3, Target, User, Sun, Settings } from "lucide-react";
+import { BarChart3, CalendarDays, User, Sun, Route } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { subscribeTourNav } from "@/components/onboarding/tour-highlight";
 import { setNavPending, subscribeNavPending } from "./nav-pending";
 
 const links = [
-  { href: "/", label: "Недели", labelMd: "12 недель", icon: CalendarDays, tourNav: "weeks" },
   { href: "/today", label: "Сегодня", icon: Sun, tourNav: "today" },
-  { href: "/goals", label: "Цели", icon: Target, tourNav: "goals" },
-  { href: "/stats", label: "Стат", icon: BarChart3, tourNav: "stats" },
-  { href: "/profile", label: "Профиль", icon: User, tourNav: "profile" },
+  { href: "/", label: "Недели", labelMd: "12 недель", icon: CalendarDays, tourNav: "weeks" },
+  { href: "/hero", label: "Герой", icon: User, tourNav: "hero" },
+  { href: "/path", label: "Путь", icon: Route, tourNav: "path" },
+  { href: "/stats", label: "Статистика", icon: BarChart3, tourNav: "stats" },
 ];
 
-const allHrefs = [...links.map((l) => l.href), "/settings"];
+const allHrefs = [...links.map((l) => l.href), "/settings", "/profile"];
 
 export function BottomNav() {
   const pathname = usePathname();
@@ -42,11 +42,11 @@ export function BottomNav() {
   return (
     <nav
       className={cn(
-        "no-print fixed bottom-0 left-0 right-0 z-40 border-t border-white/10 bg-background/80 backdrop-blur-xl pb-[env(safe-area-inset-bottom)]",
+        "no-print fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-background pb-[env(safe-area-inset-bottom)] shadow-[0_-4px_24px_rgba(15,23,42,0.06)] dark:border-white/10 dark:shadow-none",
         tourNav && "z-[90] pointer-events-none"
       )}
     >
-      <div className="mx-auto flex max-w-lg items-center justify-around px-1 py-2 md:max-w-4xl md:px-2">
+      <div className="mx-auto flex max-w-lg items-center justify-around px-0.5 py-2 md:max-w-4xl md:px-1">
         {links.map(({ href, label, labelMd, icon: Icon, tourNav: id }) => {
           const active = pathname === href || pending === href;
           const highlighted = tourNav === id;
@@ -55,10 +55,11 @@ export function BottomNav() {
               key={href}
               href={href}
               prefetch
+              scroll={false}
               onClick={() => markPending(href)}
               data-tour={`nav-${id}`}
               className={cn(
-                "flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-lg px-1 py-1.5 text-[10px] font-medium leading-tight transition-colors md:flex-none md:px-3",
+                "flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-lg px-0.5 py-1.5 text-[9px] font-medium leading-tight transition-colors sm:text-[10px] md:flex-none md:px-2",
                 active
                   ? "text-primary"
                   : "text-muted-foreground hover:text-foreground",
@@ -68,7 +69,7 @@ export function BottomNav() {
               )}
             >
               <Icon className={cn("h-5 w-5 shrink-0", (active || highlighted) && "drop-shadow-[0_0_8px_rgba(52,211,153,0.6)]")} />
-              <span className="whitespace-nowrap">
+              <span className="max-w-full truncate whitespace-nowrap">
                 {labelMd ? (
                   <>
                     <span className="md:hidden">{label}</span>
@@ -81,19 +82,6 @@ export function BottomNav() {
             </Link>
           );
         })}
-        <Link
-          href="/settings"
-          prefetch
-          onClick={() => markPending("/settings")}
-          className={cn(
-            "flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-lg px-1 py-1.5 text-[10px] font-medium leading-tight text-muted-foreground hover:text-foreground md:flex-none md:px-3",
-            (pathname === "/settings" || pending === "/settings") && "text-primary",
-            tourNav && "opacity-35"
-          )}
-        >
-          <Settings className="h-5 w-5" />
-          Ещё
-        </Link>
       </div>
     </nav>
   );

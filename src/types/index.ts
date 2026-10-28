@@ -1,9 +1,21 @@
+import type { CharacterState, SeasonFlameState } from "@/types/rpg";
+
+export type { CharacterState, SeasonFlameState, RaceId, CharacterGender, ItemRarity } from "@/types/rpg";
+
 export type Sphere = {
   id: string;
   name: string;
   icon: string;
   color: string;
   custom?: boolean;
+  /** Описание цели на 12 недель */
+  description?: string;
+  /** Начальное значение (число, для анализа) */
+  startValue?: number;
+  /** Целевое значение (число, для анализа) */
+  targetValue?: number;
+  /** Текущее значение (число, для анализа и статистики) */
+  currentValue?: number;
 };
 
 export type GoalType = "counter" | "metric" | "onetime";
@@ -12,10 +24,11 @@ export type IncrementEntry = { date: string; amount: number };
 
 export type MeasurementEntry = { id?: string; date: string; value: number };
 
-/** Недельная задача в разделе «12 недель», привязана к цели периода */
+/** Недельная задача внутри цели (сферы) на 12 недель */
 export type CycleTask = {
   id: string;
-  goalId: string;
+  /** Устарело: раньше привязка к цели периода; новые задачи только по sphereId */
+  goalId?: string;
   sphereId: string;
   week: number;
   title: string;
@@ -89,6 +102,10 @@ export type Profile = {
   lastActivityDate: string | null;
   achievements: AchievementId[];
   xpLedger?: XpLedgerEntry[];
+  /** ISO date — «Открыть день» */
+  lastRitualDate?: string | null;
+  /** ISO date — бонус за дневной квест */
+  dailyQuestClaimDate?: string | null;
 };
 
 export type ThemeMode = "dark" | "light";
@@ -112,9 +129,17 @@ export type AppState = {
   profile: Profile;
   theme: ThemeMode;
   hiddenSphereIds: string[];
+  /** Фильтр сфер только для раздела «12 недель». Не связан с «Сегодня». */
+  weekHiddenSphereIds: string[];
+  /** Выбранная цель в «12 недель» (всегда одна). */
+  weekFilterSphereId: string;
+  /** Выбранная цель на странице «Цели». */
+  goalsFilterSphereId: string;
   dayAssignments: DayAssignments;
+  character: CharacterState;
+  seasonFlame: SeasonFlameState;
 };
 
 export const STORAGE_KEY = "twelve-weeks-tracker-v1";
 export const AUTH_STORAGE_KEY = "twelve-weeks-auth-v1";
-export const DATA_VERSION = 6;
+export const DATA_VERSION = 13;

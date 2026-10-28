@@ -16,6 +16,10 @@ export const XP_WEEK_CLOSED = 50;
 export const XP_GOAL_COMPLETED = 100;
 export const XP_STREAK_PER_DAY = 5;
 export const XP_STREAK_CAP = 50;
+export const XP_DAILY_RITUAL_MIN = 12;
+export const XP_DAILY_RITUAL_MAX = 28;
+export const XP_DAILY_QUEST_BONUS = 40;
+export const DAILY_QUEST_TASKS = 3;
 
 export const MAX_LEVEL = 100;
 

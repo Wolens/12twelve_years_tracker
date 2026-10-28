@@ -18,8 +18,7 @@ export function visibleSpheres(spheres: Sphere[], hiddenSphereIds: string[]): Sp
   return spheres.filter((s) => isSphereVisible(s.id, hiddenSphereIds));
 }
 
-/** Блоки сфер для недели: только отмеченные в фильтре (галочка = показать) */
-export function groupWeekTasksBySphere(
+export function groupWeekTasksByVisibleSpheres(
   tasks: CycleTask[],
   spheres: Sphere[],
   week: number,
@@ -27,10 +26,27 @@ export function groupWeekTasksBySphere(
 ): { sphere: Sphere; tasks: CycleTask[] }[] {
   return visibleSpheres(spheres, hiddenSphereIds).map((sphere) => ({
     sphere,
-    tasks: tasks.filter(
-      (t) => t.week === week && t.sphereId === sphere.id
-    ),
+    tasks: tasks.filter((t) => t.week === week && t.sphereId === sphere.id),
   }));
+}
+
+/** Блоки целей (сфер) для недели: всегда одна выбранная вкладка */
+export function groupWeekTasksBySphere(
+  tasks: CycleTask[],
+  spheres: Sphere[],
+  week: number,
+  hiddenSphereIds: string[],
+  filterSphereId: string
+): { sphere: Sphere; tasks: CycleTask[] }[] {
+  if (!filterSphereId) return [];
+  const sphere = visibleSpheres(spheres, hiddenSphereIds).find((s) => s.id === filterSphereId);
+  if (!sphere) return [];
+  return [
+    {
+      sphere,
+      tasks: tasks.filter((t) => t.week === week && t.sphereId === sphere.id),
+    },
+  ];
 }
 
 export function groupGoalsBySphereBlocks(

@@ -1,6 +1,5 @@
 "use client";
 
-import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
@@ -163,7 +162,7 @@ export function GoalCard({
   }
 
   return (
-    <motion.div layout initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }}>
+    <div>
       <Card className="overflow-hidden" style={{ boxShadow: `0 0 40px ${color}15` }}>
         <CardHeader className="pb-2">
           <div className="flex items-start justify-between gap-2">
@@ -181,6 +180,6 @@ export function GoalCard({
         </CardHeader>
         <CardContent className="space-y-4">{inner}</CardContent>
       </Card>
-    </motion.div>
+    </div>
   );
 }
