@@ -1,5 +1,6 @@
 import type { Profile, XpLedgerEntry } from "@/types";
 import { todayISO } from "@/lib/gamification";
+import { syncProfileFromLedger } from "@/lib/xp-ledger";
 import {
   DAILY_QUEST_TASKS,
   XP_DAILY_QUEST_BONUS,
@@ -26,13 +27,94 @@ export function cycleTasksCompletedToday(ledger: XpLedgerEntry[] | undefined): n
   ).length;
 }
 
-function localDateOf(iso: string): string {
+export function localDateOf(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso.slice(0, 10);
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
+}
+
+function pickBestDailyEntry(
+  map: Map<string, XpLedgerEntry>,
+  day: string,
+  entry: XpLedgerEntry,
+  sourceForDay: (d: string) => string
+): void {
+  const prev = map.get(day);
+  if (!prev || entry.amount > prev.amount) {
+    map.set(day, { ...entry, sourceId: sourceForDay(day) });
+  }
+}
+
+/** Не больше одной записи daily_ritual / daily_quest на календарный день (локальное время). */
+export function dedupeXpLedger(ledger: XpLedgerEntry[]): XpLedgerEntry[] {
+  const other: XpLedgerEntry[] = [];
+  const bySource = new Map<string, XpLedgerEntry>();
+  const ritualByDay = new Map<string, XpLedgerEntry>();
+  const questByDay = new Map<string, XpLedgerEntry>();
+
+  for (const entry of ledger) {
+    const sid = entry.sourceId;
+    if (sid?.startsWith("daily_ritual:")) {
+      const sidDay = sid.slice("daily_ritual:".length);
+      const cal = localDateOf(entry.at);
+      pickBestDailyEntry(ritualByDay, sidDay, entry, xpSourceDailyRitual);
+      if (cal !== sidDay) pickBestDailyEntry(ritualByDay, cal, entry, xpSourceDailyRitual);
+      continue;
+    }
+    if (sid?.startsWith("daily_quest:")) {
+      const sidDay = sid.slice("daily_quest:".length);
+      const cal = localDateOf(entry.at);
+      pickBestDailyEntry(questByDay, sidDay, entry, xpSourceDailyQuest);
+      if (cal !== sidDay) pickBestDailyEntry(questByDay, cal, entry, xpSourceDailyQuest);
+      continue;
+    }
+    if (sid) {
+      if (!bySource.has(sid)) bySource.set(sid, entry);
+    } else {
+      other.push(entry);
+    }
+  }
+
+  const rituals = new Map<string, XpLedgerEntry>();
+  for (const e of Array.from(ritualByDay.values())) {
+    const day = localDateOf(e.at);
+    pickBestDailyEntry(rituals, day, e, xpSourceDailyRitual);
+  }
+  const quests = new Map<string, XpLedgerEntry>();
+  for (const e of Array.from(questByDay.values())) {
+    const day = localDateOf(e.at);
+    pickBestDailyEntry(quests, day, e, xpSourceDailyQuest);
+  }
+
+  return [
+    ...Array.from(bySource.values()),
+    ...Array.from(rituals.values()),
+    ...Array.from(quests.values()),
+    ...other,
+  ];
+}
+
+/** Свести lastRitualDate / XP с журналом после merge или дубля на двух устройствах. */
+export function reconcileProfileDailyEngagement(profile: Profile): Profile {
+  const ledger = dedupeXpLedger(profile.xpLedger ?? []);
+  const today = todayISO();
+  let lastRitualDate = profile.lastRitualDate;
+  if (ritualClaimedToday({ ...profile, xpLedger: ledger })) {
+    lastRitualDate = today;
+  }
+  let dailyQuestClaimDate = profile.dailyQuestClaimDate;
+  if (ledger.some((e) => e.sourceId === xpSourceDailyQuest(today))) {
+    dailyQuestClaimDate = today;
+  }
+  return syncProfileFromLedger({
+    ...profile,
+    xpLedger: ledger,
+    lastRitualDate,
+    dailyQuestClaimDate,
+  });
 }
 
 export function ritualClaimedToday(profile: Profile): boolean {

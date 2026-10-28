@@ -110,6 +110,23 @@ export function xpForWeek(
   );
 }
 
+export function filterLedgerBySphere(
+  ledger: XpLedgerEntry[] | undefined,
+  sphereId: string,
+  tasks: { id: string; sphereId: string }[],
+  goals: { id: string; sphereId: string }[]
+): XpLedgerEntry[] {
+  const taskIds = new Set(tasks.filter((t) => t.sphereId === sphereId).map((t) => t.id));
+  const goalIds = new Set(goals.filter((g) => g.sphereId === sphereId).map((g) => g.id));
+  return (ledger ?? []).filter((entry) => {
+    const sourceId = entry.sourceId ?? "";
+    if (sourceId.startsWith("cycle_task:")) return taskIds.has(sourceId.slice("cycle_task:".length));
+    if (sourceId.startsWith("onetime_goal:")) return goalIds.has(sourceId.slice("onetime_goal:".length));
+    if (sourceId.startsWith("goal_complete:")) return goalIds.has(sourceId.slice("goal_complete:".length));
+    return false;
+  });
+}
+
 export function xpLast7Days(ledger: XpLedgerEntry[] | undefined): number {
   return sumXp(filterLedgerSince(ledger, 7));
 }

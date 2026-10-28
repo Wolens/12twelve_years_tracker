@@ -11,6 +11,7 @@ import {
   xpLast7Days,
   sumXp,
   filterLedgerSince,
+  filterLedgerBySphere,
 } from "@/lib/stats/xp-activity";
 import { sphereTaskStats } from "@/lib/stats/sphere-task-stats";
 import { StatsHeroSummary } from "@/components/stats/stats-hero-summary";
@@ -45,6 +46,7 @@ export default function StatsPage() {
   const activeWeek = useAppStore((s) => s.activeWeek);
   const cycleStartDate = useAppStore((s) => s.cycleStartDate);
   const seasonFlame = useAppStore((s) => s.seasonFlame);
+  const goals = useAppStore((s) => s.goals);
 
   const [filterSphere, setFilterSphere] = useState<string>("all");
   const [taskWeekScope, setTaskWeekScope] = useState<"all" | "active">("all");
@@ -65,15 +67,19 @@ export default function StatsPage() {
   );
 
   const ledger = profile.xpLedger;
+  const activityLedger = useMemo(() => {
+    if (filterSphere === "all") return ledger;
+    return filterLedgerBySphere(ledger, filterSphere, cycleTasks, goals);
+  }, [ledger, filterSphere, cycleTasks, goals]);
   const xp7d = useMemo(() => xpLast7Days(ledger), [ledger]);
-  const xpDaily = useMemo(() => xpByDay(ledger, XP_CHART_DAYS), [ledger]);
+  const xpDaily = useMemo(() => xpByDay(activityLedger, XP_CHART_DAYS), [activityLedger]);
   const xpSources = useMemo(
-    () => xpBySourceBucket(ledger, XP_SOURCE_DAYS),
-    [ledger]
+    () => xpBySourceBucket(activityLedger, XP_SOURCE_DAYS),
+    [activityLedger]
   );
   const xpSourceTotal = useMemo(
-    () => sumXp(filterLedgerSince(ledger, XP_SOURCE_DAYS)),
-    [ledger]
+    () => sumXp(filterLedgerSince(activityLedger, XP_SOURCE_DAYS)),
+    [activityLedger]
   );
 
   const weekXpFn = useMemo(
@@ -191,7 +197,9 @@ export default function StatsPage() {
       <div className="game-surface space-y-4 p-4">
         <h2 className="font-display text-lg font-semibold">Активность</h2>
         <p className="text-xs text-muted-foreground">
-          Здоровье сейчас: {Math.round(seasonFlame?.value ?? 100)}%
+          {filterSphere === "all"
+            ? `Здоровье сейчас: ${Math.round(seasonFlame?.value ?? 100)}%`
+            : `Только направление «${spheres.find((s) => s.id === filterSphere)?.name ?? ""}»`}
         </p>
         <StatsXpChart data={xpDaily} />
         <div>

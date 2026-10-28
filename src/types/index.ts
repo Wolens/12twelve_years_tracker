@@ -77,9 +77,14 @@ export type AchievementId =
   | "first_goal_done"
   | "all_sphere_goals"
   | "cycle_complete"
+  | "week_perfect_3"
+  | "floor_opened"
+  | "ritual_7"
+  | "first_purchase"
+  | "chest_opened"
+  | "race_chosen"
   | "first_counter_log"
   | "first_metric_log"
-  | "week_perfect_3"
   | "onboarding_done"
   | "demo_loaded";
 

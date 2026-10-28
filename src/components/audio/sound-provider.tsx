@@ -27,7 +27,7 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!soundOn) return;
 
-    const onPointerDown = (event: PointerEvent) => {
+    const onClick = (event: MouseEvent) => {
       if (event.button !== 0) return;
       const target = event.target as HTMLElement | null;
       if (!target) return;
@@ -42,8 +42,8 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
       playUiClick(pathname === "/path");
     };
 
-    document.addEventListener("pointerdown", onPointerDown, { capture: true });
-    return () => document.removeEventListener("pointerdown", onPointerDown, { capture: true });
+    document.addEventListener("click", onClick, { capture: true });
+    return () => document.removeEventListener("click", onClick, { capture: true });
   }, [soundOn, pathname]);
 
   return children;

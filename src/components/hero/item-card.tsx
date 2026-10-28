@@ -68,7 +68,7 @@ export const ItemCard = memo(function ItemCard({
     <>
       <div className={cn("game-surface overflow-hidden p-0", style.glow)}>
         <div className={cn("h-1 w-full bg-gradient-to-r", STRIPE[item.rarity])} />
-        <div className="p-3">
+        <div className="p-2.5">
           <div className="flex items-start gap-2">
             <span
               className={cn(
@@ -78,14 +78,19 @@ export const ItemCard = memo(function ItemCard({
             >
               <ItemGlyph itemId={item.id} glyph={item.glyph} className="h-8 w-8" />
             </span>
-            <div className="min-w-0 flex-1">
-              <p className={cn("text-[10px] font-semibold uppercase tracking-wider", style.text)}>
+            <div className="flex min-w-0 flex-1 items-start justify-between gap-1 pt-0.5">
+              <p className={cn("text-[10px] font-semibold uppercase leading-tight tracking-wide", style.text)}>
                 {style.label}
               </p>
-              <p className="font-medium leading-snug">{item.name}</p>
+              <ItemBonuses
+                health={item.healthBonus}
+                strength={item.strengthBonus}
+                compact
+                className="shrink-0"
+              />
             </div>
-            <ItemBonuses health={item.healthBonus} strength={item.strengthBonus} className="shrink-0 pt-0.5" />
           </div>
+          <p className="mt-2 text-sm font-medium leading-snug">{item.name}</p>
           <div className="mt-3">
             {owned ? (
               <div className="flex gap-1.5">

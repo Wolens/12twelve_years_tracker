@@ -2,6 +2,8 @@
 
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { usePathname } from "next/navigation";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { useAppStore } from "@/store/useAppStore";
 import { todayISO } from "@/lib/gamification";
 import { CYCLE_DAYS, todayIndex } from "@/lib/rpg/day-route";
@@ -104,6 +106,9 @@ function measureWindow(column: HTMLElement) {
   return { first, last };
 }
 
+const VIEW_HEAD = 112;
+const VIEW_FOOT = 168;
+
 function scrollTowerToDay(column: HTMLElement, day: number) {
   const slot = LAYOUT.slots.find((item) => item.kind === "floor" && item.day === day);
   if (!slot) return;
@@ -111,6 +116,18 @@ function scrollTowerToDay(column: HTMLElement, day: number) {
   const columnDocTop = column.getBoundingClientRect().top + window.scrollY;
   const floorBottom = columnDocTop + pad + slot.top + slot.h;
   window.scrollTo(0, Math.max(0, floorBottom - window.innerHeight * 0.72));
+}
+
+function heroScrollHint(column: HTMLElement, day: number): "up" | "down" | null {
+  const slot = LAYOUT.slots.find((item) => item.kind === "floor" && item.day === day);
+  if (!slot) return null;
+  const pad = Number.parseFloat(getComputedStyle(column).paddingTop) || PAD;
+  const columnTop = column.getBoundingClientRect().top + pad;
+  const floorTopPx = columnTop + slot.top;
+  const floorBottomPx = floorTopPx + slot.h;
+  if (floorBottomPx < VIEW_HEAD) return "up";
+  if (floorTopPx > window.innerHeight - VIEW_FOOT) return "down";
+  return null;
 }
 
 function TowerAtmosphere({ progress }: { progress: number }) {
@@ -170,6 +187,8 @@ function TowerAtmosphere({ progress }: { progress: number }) {
 }
 
 export function TowerBoard() {
+  const pathname = usePathname();
+  const pathActive = pathname === "/path";
   const start = useAppStore((s) => s.cycleStartDate);
   const ledger = useAppStore((s) => s.profile.xpLedger ?? EMPTY_LEDGER);
   const profile = useAppStore((s) => s.profile);
@@ -195,8 +214,8 @@ export function TowerBoard() {
   const [chestFloor, setChestFloor] = useState<number | null>(null);
   const [chestOpen, setChestOpen] = useState(false);
   const promptedOpen = useRef(false);
-  const scrolled = useRef(false);
   const columnRef = useRef<HTMLDivElement>(null);
+  const [scrollHint, setScrollHint] = useState<"up" | "down" | null>(null);
   const activeWeek = useAppStore((s) => s.activeWeek);
   const activeDay = useAppStore((s) => s.activeDay);
   const claimedFloorChests = useAppStore((s) => s.character.claimedFloorChests ?? EMPTY_CHESTS);
@@ -236,33 +255,36 @@ export function TowerBoard() {
     setPicked(standDay);
   }, [standDay, opened]);
 
-  useLayoutEffect(() => {
-    if (scrolled.current || standDay === null) return;
+  const scrollToStandDay = useCallback(() => {
+    if (standDay === null) return;
     const column = columnRef.current;
-    if (!column || column.getClientRects().length === 0) return;
-    scrolled.current = true;
+    if (!column) return;
     scrollTowerToDay(column, standDay);
     const next = measureWindow(column);
     if (next) {
       rangeRef.current = next;
       setRange(next);
     }
+    const hint = heroScrollHint(column, standDay);
+    setScrollHint(hint);
   }, [standDay]);
 
-  useEffect(() => {
-    if (standDay === null) return;
+  useLayoutEffect(() => {
+    if (!pathActive || standDay === null) return;
     const column = columnRef.current;
     if (!column) return;
-    const id = requestAnimationFrame(() => {
-      if (column.getClientRects().length === 0) return;
-      if (!scrolled.current) {
-        scrolled.current = true;
-        scrollTowerToDay(column, standDay);
-      }
-      setCanMove(true);
-    });
+    scrollToStandDay();
+    const id = requestAnimationFrame(() => scrollToStandDay());
     return () => cancelAnimationFrame(id);
-  }, [standDay]);
+  }, [pathActive, standDay, scrollToStandDay]);
+
+  useEffect(() => {
+    if (!pathActive || standDay === null) return;
+    const column = columnRef.current;
+    if (!column) return;
+    const id = requestAnimationFrame(() => setCanMove(true));
+    return () => cancelAnimationFrame(id);
+  }, [pathActive, standDay]);
 
   useEffect(() => {
     const column = columnRef.current;
@@ -270,11 +292,16 @@ export function TowerBoard() {
     let raf = 0;
     const apply = () => {
       const next = measureWindow(column);
-      if (!next) return;
-      const cur = rangeRef.current;
-      if (cur.first === next.first && cur.last === next.last) return;
-      rangeRef.current = next;
-      setRange(next);
+      if (next) {
+        const cur = rangeRef.current;
+        if (cur.first !== next.first || cur.last !== next.last) {
+          rangeRef.current = next;
+          setRange(next);
+        }
+      }
+      if (pathActive && standDay !== null) {
+        setScrollHint(heroScrollHint(column, standDay));
+      }
     };
     const onScroll = () => {
       cancelAnimationFrame(raf);
@@ -282,12 +309,13 @@ export function TowerBoard() {
     };
     window.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("resize", onScroll);
+    apply();
     return () => {
       cancelAnimationFrame(raf);
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", onScroll);
     };
-  }, []);
+  }, [pathActive, standDay]);
 
   useEffect(() => {
     if (picked === null) return;
@@ -341,20 +369,24 @@ export function TowerBoard() {
       <TowerSvgDefs />
       <TowerAtmosphere progress={progress} />
 
-      <header className="sticky top-12 z-30 flex items-center justify-between gap-2 border-b border-white/[0.06] bg-[#0c1016] px-3 py-2.5 sm:gap-3 sm:px-4">
-        <h1 className="font-display text-xl font-bold tracking-tight">Башня</h1>
-        <div className="flex shrink-0 items-center gap-2">
-          <SoundVolumeSlider compact />
-          <p className="flex items-center gap-1.5 rounded-full border border-white/[0.08] bg-black/30 px-2.5 py-1 text-xs text-muted-foreground">
-            <svg viewBox="0 0 16 16" className="h-4 w-4" aria-hidden>
-              <circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" strokeWidth="1.1" />
-              <path d="M8 2.2 V8 L11 9.6" fill="none" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" />
-              <path d="M8 1.2 V2.6 M8 13.4 V14.8 M1.2 8 H2.6 M13.4 8 H14.8" stroke="currentColor" strokeWidth="1" />
-            </svg>
-            <span className="tabular-nums">
-              {dayNumber} / {CYCLE_DAYS}
-            </span>
-          </p>
+      <header className="pointer-events-none fixed inset-x-0 top-0 z-40 flex justify-center px-3 pt-[max(0.25rem,env(safe-area-inset-top))] md:pt-3">
+        <div className="pointer-events-auto flex w-full max-w-lg items-center justify-between gap-2 pr-12 md:max-w-4xl">
+          <h1 className="font-display text-xl font-bold tracking-tight text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)]">
+            Башня
+          </h1>
+          <div className="flex min-w-0 shrink items-center gap-2">
+            <SoundVolumeSlider compact />
+            <p className="flex shrink-0 items-center gap-1.5 rounded-full border border-white/[0.08] bg-black/30 px-2.5 py-1 text-xs text-muted-foreground">
+              <svg viewBox="0 0 16 16" className="h-4 w-4" aria-hidden>
+                <circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" strokeWidth="1.1" />
+                <path d="M8 2.2 V8 L11 9.6" fill="none" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" />
+                <path d="M8 1.2 V2.6 M8 13.4 V14.8 M1.2 8 H2.6 M13.4 8 H14.8" stroke="currentColor" strokeWidth="1" />
+              </svg>
+              <span className="tabular-nums">
+                {dayNumber} / {CYCLE_DAYS}
+              </span>
+            </p>
+          </div>
         </div>
       </header>
 
@@ -438,6 +470,27 @@ export function TowerBoard() {
           )}
           aria-hidden
         />
+      )}
+
+      {pathActive && standDay !== null && scrollHint && (
+        <div className="pointer-events-none fixed inset-x-0 bottom-[5.25rem] z-50 flex justify-center px-3">
+          <button
+            type="button"
+            aria-label="К моему этажу"
+            onClick={scrollToStandDay}
+            className={cn(
+              "pointer-events-auto flex h-11 w-11 items-center justify-center rounded-full",
+              "border border-white/15 bg-[#161a17]/95 text-white shadow-lg backdrop-blur-sm",
+              "transition hover:border-amber-400/40 hover:bg-[#1c211c]"
+            )}
+          >
+            {scrollHint === "up" ? (
+              <ChevronUp className="h-6 w-6" aria-hidden />
+            ) : (
+              <ChevronDown className="h-6 w-6" aria-hidden />
+            )}
+          </button>
+        </div>
       )}
 
       {focus && (

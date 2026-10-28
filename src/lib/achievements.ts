@@ -1,17 +1,19 @@
 import { checkLevelAchievements } from "@/lib/gamification";
+import { GAME_ITEMS } from "@/lib/rpg/catalog";
 import type { AchievementId, AppState, Profile } from "@/types";
 
-/** Стабильный порядок отображения */
+/** Стабильный порядок отображения. Старые id (онбординг, демо, счётчик) больше не показываются. */
 const ACHIEVEMENT_ORDER: AchievementId[] = [
-  "onboarding_done",
-  "demo_loaded",
-  "first_counter_log",
-  "first_metric_log",
+  "floor_opened",
+  "ritual_7",
   "first_goal_done",
   "first_week_closed",
   "week_perfect_3",
   "cycle_complete",
   "all_sphere_goals",
+  "first_purchase",
+  "chest_opened",
+  "race_chosen",
   "streak_7",
   "streak_30",
   "level_10",
@@ -20,27 +22,39 @@ const ACHIEVEMENT_ORDER: AchievementId[] = [
   "level_100",
 ];
 
+const SHOP_ITEM_IDS = new Set(GAME_ITEMS.filter((item) => item.price > 0).map((item) => item.id));
+
+type AchievementState = Pick<
+  AppState,
+  "onboardingComplete" | "goals" | "weeks" | "spheres" | "profile" | "cycleTasks"
+> & {
+  character?: AppState["character"];
+};
+
 function setsEqual(a: AchievementId[], b: AchievementId[]): boolean {
   if (a.length !== b.length) return false;
   const sa = new Set(a);
   return b.every((id) => sa.has(id));
 }
 
-export function computeEarnedAchievements(
-  state: Pick<AppState, "onboardingComplete" | "goals" | "weeks" | "spheres" | "profile" | "cycleTasks">
-): AchievementId[] {
-  const { onboardingComplete, weeks, spheres, profile, cycleTasks } = state;
+function ritualDays(profile: Profile): number {
+  const days = new Set<string>();
+  for (const entry of profile.xpLedger ?? []) {
+    if (!entry.sourceId?.startsWith("daily_ritual:")) continue;
+    days.add(entry.sourceId.slice("daily_ritual:".length));
+  }
+  return days.size;
+}
+
+export function computeEarnedAchievements(state: AchievementState): AchievementId[] {
+  const { weeks, spheres, profile, cycleTasks, character } = state;
   const earned = new Set<AchievementId>();
 
-  if (onboardingComplete) earned.add("onboarding_done");
+  const rituals = ritualDays(profile);
+  if (rituals >= 1) earned.add("floor_opened");
+  if (rituals >= 7) earned.add("ritual_7");
 
-  if (cycleTasks.some((t) => t.title === "2 рилса" || t.title === "3 тренировки")) {
-    earned.add("demo_loaded");
-  }
-
-  if (cycleTasks.some((t) => t.done)) {
-    earned.add("first_goal_done");
-  }
+  if (cycleTasks.some((t) => t.done)) earned.add("first_goal_done");
 
   if (weeks.some((w) => w.bonusAwarded)) earned.add("first_week_closed");
 
@@ -56,15 +70,22 @@ export function computeEarnedAchievements(
     earned.add("cycle_complete");
   }
 
-  if (
-    spheres.length > 0 &&
-    spheres.every((s) => {
-      const ts = cycleTasks.filter((t) => t.sphereId === s.id);
-      return ts.length > 0 && ts.every((t) => t.done);
-    })
-  ) {
-    earned.add("all_sphere_goals");
+  const sphereCleared = spheres.some((sphere) => {
+    const tasks = cycleTasks.filter((t) => t.sphereId === sphere.id);
+    return tasks.length > 0 && tasks.every((t) => t.done);
+  });
+  if (sphereCleared) earned.add("all_sphere_goals");
+
+  if (character?.inventory.some((id) => SHOP_ITEM_IDS.has(id))) {
+    earned.add("first_purchase");
   }
+  if (
+    (character?.claimedFloorChests?.length ?? 0) > 0 ||
+    (character?.claimedLevelRewards?.length ?? 0) > 0
+  ) {
+    earned.add("chest_opened");
+  }
+  if (character && character.race !== "human") earned.add("race_chosen");
 
   if (profile.streak >= 7) earned.add("streak_7");
   if (profile.streak >= 30) earned.add("streak_30");
@@ -76,15 +97,11 @@ export function computeEarnedAchievements(
   return ACHIEVEMENT_ORDER.filter((id) => earned.has(id));
 }
 
-export function syncProfileAchievements(
-  state: Pick<AppState, "onboardingComplete" | "goals" | "weeks" | "spheres" | "profile" | "cycleTasks">
-): Profile {
+export function syncProfileAchievements(state: AchievementState): Profile {
   const achievements = computeEarnedAchievements(state);
   return { ...state.profile, achievements };
 }
 
-export function achievementsNeedSync(
-  state: Pick<AppState, "onboardingComplete" | "goals" | "weeks" | "spheres" | "profile" | "cycleTasks">
-): boolean {
+export function achievementsNeedSync(state: AchievementState): boolean {
   return !setsEqual(state.profile.achievements, computeEarnedAchievements(state));
 }

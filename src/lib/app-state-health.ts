@@ -1,4 +1,5 @@
 import type { AppState, CycleTask, Goal, Sphere, WeekData, XpLedgerEntry } from "@/types";
+import { reconcileProfileDailyEngagement } from "@/lib/daily-engagement";
 import { resolveSphereFilterId } from "./sphere-filter-default";
 
 /** Есть ли у пользователя реальный прогресс (не пустой гость). */
@@ -154,6 +155,7 @@ export function repairAppState(state: AppState): AppState {
 
   return {
     ...next,
+    profile: reconcileProfileDailyEngagement(next.profile),
     weekFilterSphereId:
       next.weekFilterSphereId === resolvedWeekFilter ? next.weekFilterSphereId : resolvedWeekFilter,
     goalsFilterSphereId:

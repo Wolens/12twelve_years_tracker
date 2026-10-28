@@ -27,10 +27,55 @@ export const ACHIEVEMENTS_META: Record<
   string,
   { title: string; description: string; emoji: string }
 > = {
+  floor_opened: {
+    title: "Этаж открыт",
+    description: "Первый раз открыл этаж в башне",
+    emoji: "🚪",
+  },
+  ritual_7: {
+    title: "Неделя в башне",
+    description: "7 разных дней с открытым этажом",
+    emoji: "🗼",
+  },
+  first_goal_done: {
+    title: "Первая задача",
+    description: "Отмечена первая задача недели",
+    emoji: "✅",
+  },
   first_week_closed: {
     title: "Первая неделя",
-    description: "Закрыта первая неделя цикла",
+    description: "Неделя закрыта и бонус получен",
     emoji: "📅",
+  },
+  week_perfect_3: {
+    title: "Три подряд",
+    description: "Три недели закрыты подряд",
+    emoji: "🔗",
+  },
+  cycle_complete: {
+    title: "12 недель",
+    description: "Все 12 недель цикла закрыты",
+    emoji: "🎉",
+  },
+  all_sphere_goals: {
+    title: "Направление закрыто",
+    description: "Все задачи одного направления выполнены",
+    emoji: "💎",
+  },
+  first_purchase: {
+    title: "Первая покупка",
+    description: "Куплена вещь в магазине",
+    emoji: "🪙",
+  },
+  chest_opened: {
+    title: "Сундук",
+    description: "Открыт сундук этажа или уровня",
+    emoji: "🎁",
+  },
+  race_chosen: {
+    title: "Облик",
+    description: "Выбран облик героя вместо человека",
+    emoji: "🧙",
   },
   streak_7: {
     title: "Огонёк 7",
@@ -39,7 +84,7 @@ export const ACHIEVEMENTS_META: Record<
   },
   streak_30: {
     title: "Несгораемый",
-    description: "30 дней streak",
+    description: "30 дней подряд с активностью",
     emoji: "💥",
   },
   level_10: {
@@ -61,45 +106,5 @@ export const ACHIEVEMENTS_META: Record<
     title: "Легенда",
     description: "Максимальный уровень",
     emoji: "👑",
-  },
-  first_goal_done: {
-    title: "Цель достигнута",
-    description: "Первая цель выполнена",
-    emoji: "🎯",
-  },
-  all_sphere_goals: {
-    title: "Сфера закрыта",
-    description: "Все цели одной сферы выполнены",
-    emoji: "💎",
-  },
-  cycle_complete: {
-    title: "12 недель",
-    description: "Цикл полностью завершён",
-    emoji: "🎉",
-  },
-  first_counter_log: {
-    title: "Счётчик",
-    description: "Первый прогресс по количественной цели",
-    emoji: "➕",
-  },
-  first_metric_log: {
-    title: "Замер",
-    description: "Первый замер метрики",
-    emoji: "📏",
-  },
-  week_perfect_3: {
-    title: "Три подряд",
-    description: "3 недели закрыты подряд",
-    emoji: "🔗",
-  },
-  onboarding_done: {
-    title: "Старт",
-    description: "Онбординг завершён",
-    emoji: "🚀",
-  },
-  demo_loaded: {
-    title: "Демо",
-    description: "Загружены примеры данных",
-    emoji: "🧪",
   },
 };

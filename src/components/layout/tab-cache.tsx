@@ -79,7 +79,7 @@ export function TabCache({ children }: { children: ReactNode }) {
       const link = (event.target as Element | null)?.closest?.("a[href]");
       if (!link) return;
       const key = tabKey(pathRef.current);
-      if (key) scrolls.current.set(key, window.scrollY);
+      if (key && key !== "/path") scrolls.current.set(key, window.scrollY);
     };
     document.addEventListener("pointerdown", onPointerDown, true);
     return () => document.removeEventListener("pointerdown", onPointerDown, true);
@@ -119,10 +119,11 @@ export function TabCache({ children }: { children: ReactNode }) {
 
 function applyScroll(key: string | null, scrolls: Map<string, number>) {
   if (!key) return;
+  if (key === "/path") return;
   const saved = scrolls.get(key);
   if (saved != null) {
     window.scrollTo(0, saved);
     return;
   }
-  if (key !== "/path") window.scrollTo(0, 0);
+  window.scrollTo(0, 0);
 }

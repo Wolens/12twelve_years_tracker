@@ -45,6 +45,7 @@ import { assignGoalToDay, removeGoalFromWeekPlan } from "@/lib/day-plan";
 import { hasUserProgress, repairAppState } from "@/lib/app-state-health";
 import {
   dailyQuestBonusAmount,
+  reconcileProfileDailyEngagement,
   randomRitualXp,
   ritualClaimedToday,
   xpSourceDailyQuest,
@@ -301,9 +302,16 @@ export const useAppStore = create<Store>()(
       claimDailyRitual: () => {
         const today = todayISO();
         const state = get();
-        if (ritualClaimedToday(state.profile)) return 0;
+        const reconciled = reconcileProfileDailyEngagement(state.profile);
+        if (
+          reconciled.xp !== state.profile.xp ||
+          reconciled.lastRitualDate !== state.profile.lastRitualDate
+        ) {
+          set({ profile: reconciled });
+        }
+        if (ritualClaimedToday(reconciled)) return 0;
         const sourceId = xpSourceDailyRitual(today);
-        if ((state.profile.xpLedger ?? []).some((e) => e.sourceId === sourceId)) return 0;
+        if ((reconciled.xpLedger ?? []).some((e) => e.sourceId === sourceId)) return 0;
         const amount = randomRitualXp();
         set((s) => {
           const { profile, levelUp } = grantXp(s.profile, {

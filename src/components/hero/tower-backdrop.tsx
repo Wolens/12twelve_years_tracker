@@ -42,7 +42,7 @@ export function TowerBackdrop({
       />
 
       <div
-        className="absolute inset-x-0 top-14 h-[min(38vh,280px)] opacity-95 sm:top-16"
+        className="absolute inset-x-0 top-6 h-[min(34vh,240px)] opacity-95 sm:top-24"
         style={{ transform: `translateY(${far}px)` }}
       >
         <svg viewBox="0 0 400 220" className="h-full w-full" preserveAspectRatio="xMidYMin slice">
@@ -57,8 +57,8 @@ export function TowerBackdrop({
               <stop offset="100%" stopColor="#e2e8f0" stopOpacity="0" />
             </radialGradient>
             <mask id="tw-crescent-mask">
-              <rect x="62" y="28" width="56" height="52" fill="white" />
-              <circle cx="94" cy="50" r="19" fill="black" />
+              <rect x="24" y="16" width="56" height="52" fill="white" />
+              <circle cx="60" cy="38" r="19" fill="black" />
             </mask>
           </defs>
           {STARS.map(([x, y, r, o], i) => (
@@ -73,11 +73,11 @@ export function TowerBackdrop({
             />
           ))}
           <g opacity="0.9">
-            <ellipse cx="84" cy="52" rx="26" ry="22" fill="url(#tw-moon-halo)" />
-            <circle cx="80" cy="50" r="19" fill="url(#tw-moon-fill)" mask="url(#tw-crescent-mask)" />
-            <circle cx="72" cy="44" r="1.6" fill="#64748b" opacity="0.22" />
-            <circle cx="68" cy="52" r="1.1" fill="#64748b" opacity="0.17" />
-            <circle cx="74" cy="56" r="1.3" fill="#64748b" opacity="0.15" />
+            <ellipse cx="50" cy="40" rx="26" ry="22" fill="url(#tw-moon-halo)" />
+            <circle cx="46" cy="38" r="19" fill="url(#tw-moon-fill)" mask="url(#tw-crescent-mask)" />
+            <circle cx="38" cy="32" r="1.6" fill="#64748b" opacity="0.22" />
+            <circle cx="34" cy="40" r="1.1" fill="#64748b" opacity="0.17" />
+            <circle cx="40" cy="44" r="1.3" fill="#64748b" opacity="0.15" />
           </g>
         </svg>
       </div>

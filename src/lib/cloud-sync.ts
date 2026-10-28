@@ -4,6 +4,7 @@ import { useAppStore } from "@/store/useAppStore";
 import { appStateRichness, hasUserProgress, repairAppState } from "@/lib/app-state-health";
 import { resolveSphereFilterId } from "@/lib/sphere-filter-default";
 import { normalizeCharacter } from "@/lib/rpg/normalize-game";
+import { reconcileProfileDailyEngagement, dedupeXpLedger } from "@/lib/daily-engagement";
 import { syncProfileFromLedger } from "@/lib/xp-ledger";
 
 function mergeCharacterIdentity(local: AppState, remote: AppState): AppState["character"] {
@@ -27,7 +28,7 @@ function mergeLedger(local: XpLedgerEntry[], remote: XpLedgerEntry[]): XpLedgerE
     const key = entry.sourceId || entry.id;
     if (!byKey.has(key)) byKey.set(key, entry);
   }
-  return Array.from(byKey.values());
+  return dedupeXpLedger(Array.from(byKey.values()));
 }
 
 function mergeProfiles(local: Profile, remote: Profile): Profile {
@@ -39,17 +40,19 @@ function mergeProfiles(local: Profile, remote: Profile): Profile {
     .filter((d): d is string => Boolean(d))
     .sort()
     .at(-1) ?? null;
-  return syncProfileFromLedger({
-    ...remote,
-    streak: Math.max(local.streak ?? 0, remote.streak ?? 0),
-    lastActivityDate,
-    lastRitualDate,
-    dailyQuestClaimDate: [local.dailyQuestClaimDate, remote.dailyQuestClaimDate]
-      .filter((d): d is string => Boolean(d))
-      .sort()
-      .at(-1) ?? null,
-    xpLedger: mergeLedger(local.xpLedger ?? [], remote.xpLedger ?? []),
-  });
+  return reconcileProfileDailyEngagement(
+    syncProfileFromLedger({
+      ...remote,
+      streak: Math.max(local.streak ?? 0, remote.streak ?? 0),
+      lastActivityDate,
+      lastRitualDate,
+      dailyQuestClaimDate: [local.dailyQuestClaimDate, remote.dailyQuestClaimDate]
+        .filter((d): d is string => Boolean(d))
+        .sort()
+        .at(-1) ?? null,
+      xpLedger: mergeLedger(local.xpLedger ?? [], remote.xpLedger ?? []),
+    })
+  );
 }
 
 function mergePreferringIdentity(
@@ -128,25 +131,25 @@ export async function hydrateAppStateFromCloud(userId: string): Promise<void> {
   const remote = await fetchCloudAppState(userId);
   const local = repairAppState(useAppStore.getState().exportState());
 
-  const remoteScore = appStateRichness(remote);
-  const localScore = appStateRichness(local);
+  const hasRemote = remote && !isAppStateEmpty(remote);
+  const hasLocal = localAppStateHasData(local);
 
-  if (remote && remoteScore >= localScore && !isAppStateEmpty(remote)) {
-    useAppStore.getState().importState(mergePreferringIdentity(local, remote));
+  if (hasRemote && hasLocal) {
+    const merged = repairAppState(mergePreferringIdentity(local, remote));
+    useAppStore.getState().importState(merged);
+    await saveCloudAppState(userId, merged);
     return;
   }
 
-  if (localAppStateHasData(local)) {
-    if (remote && remoteScore > localScore) {
-      useAppStore.getState().importState(mergePreferringIdentity(local, remote));
-      return;
-    }
+  if (hasRemote) {
+    useAppStore.getState().importState(
+      repairAppState(mergePreferringIdentity(local, remote))
+    );
+    return;
+  }
+
+  if (hasLocal) {
     await saveCloudAppState(userId, local);
-    return;
-  }
-
-  if (remote) {
-    useAppStore.getState().importState(remote);
   }
 }
 
@@ -163,5 +166,19 @@ export async function saveCloudAppStateSafe(
     );
     return;
   }
-  await saveCloudAppState(userId, repaired);
+  const profile = remote
+    ? mergeProfiles(repaired.profile, remote.profile)
+    : reconcileProfileDailyEngagement(repaired.profile);
+  const toSave = repairAppState({ ...repaired, profile });
+  const result = await saveCloudAppState(userId, toSave);
+  if (result.ok && remote) {
+    const mergedProfile = toSave.profile;
+    const current = useAppStore.getState().profile;
+    if (
+      current.xp !== mergedProfile.xp ||
+      current.lastRitualDate !== mergedProfile.lastRitualDate
+    ) {
+      useAppStore.setState({ profile: mergedProfile });
+    }
+  }
 }
