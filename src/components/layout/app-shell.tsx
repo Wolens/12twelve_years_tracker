@@ -9,6 +9,8 @@ import { useAppStore } from "@/store/useAppStore";
 import { useAuthStore } from "@/store/useAuthStore";
 import { waitForCloudHydration } from "@/lib/cloud-hydration";
 import { hasUserProgress } from "@/lib/app-state-health";
+import { ritualClaimedToday } from "@/lib/daily-engagement";
+import { hasDailyEntryRouted, markDailyEntryRouted } from "@/lib/daily-entry";
 import { BottomNav } from "./bottom-nav";
 import { TabCache } from "./tab-cache";
 import { subscribeNavPending } from "./nav-pending";
@@ -115,6 +117,22 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       router.replace("/onboarding");
     }
   }, [ready, authInitialized, userId, cloudReady, onboardingComplete, pathname, router]);
+
+  useLayoutEffect(() => {
+    if (!ready || !authInitialized) return;
+    if (userId && !cloudReady) return;
+
+    const state = useAppStore.getState();
+    if (!state.onboardingComplete || !state.tourComplete) return;
+    if (ritualClaimedToday(state.profile)) return;
+    if (hasDailyEntryRouted()) return;
+    if (pathname === "/onboarding" || pathname.startsWith("/auth")) return;
+
+    markDailyEntryRouted();
+    if (pathname !== "/path") {
+      router.replace("/path");
+    }
+  }, [ready, authInitialized, userId, cloudReady, onboardingComplete, tourComplete, pathname, router]);
 
   const waitingForCloud = Boolean(userId) && !cloudReady;
   const booting =

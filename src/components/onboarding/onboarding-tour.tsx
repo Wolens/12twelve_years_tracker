@@ -76,7 +76,7 @@ export function OnboardingTour() {
   const finish = useCallback(() => {
     setTourNav(null);
     setTourComplete();
-    router.replace("/", { scroll: false });
+    router.replace("/path", { scroll: false });
   }, [router, setTourComplete]);
 
   const goPrev = useCallback(() => {

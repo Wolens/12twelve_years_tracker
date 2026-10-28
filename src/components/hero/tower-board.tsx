@@ -184,7 +184,6 @@ export function TowerBoard() {
       .join("|");
   });
   const claimDailyRitual = useAppStore((s) => s.claimDailyRitual);
-  const visitPastDay = useAppStore((s) => s.visitPastDay);
   const today = todayISO();
   const index = todayIndex(start);
   const here = index >= 0 && index < CYCLE_DAYS ? index : null;
@@ -302,28 +301,22 @@ export function TowerBoard() {
   }, []);
 
   const focus = picked === null ? null : tower.days[picked - 1];
-  const canOpen = focus?.state === "missed" || (focus?.state === "today" && !opened);
+  const canOpen = focus?.state === "today" && !opened;
 
   const openFocused = () => {
-    if (!focus || todayDay === null) return;
-    if (focus.state === "today" && !opened) {
-      const from = Math.max(1, todayDay - 1);
-      setPicked(null);
-      setClimbing(true);
-      setHeroDay(from);
-      const amount = claimDailyRitual();
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => setHeroDay(todayDay));
-      });
-      window.setTimeout(() => {
-        setClimbing(false);
-        if (amount > 0) toast({ title: `+${amount} XP · этаж открыт` });
-      }, 420);
-      return;
-    }
-    if (focus.state === "missed" && visitPastDay(focus.date)) {
-      toast({ title: "Этаж снова держит" });
-    }
+    if (!focus || todayDay === null || focus.state !== "today" || opened) return;
+    const from = Math.max(1, todayDay - 1);
+    setPicked(null);
+    setClimbing(true);
+    setHeroDay(from);
+    const amount = claimDailyRitual();
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => setHeroDay(todayDay));
+    });
+    window.setTimeout(() => {
+      setClimbing(false);
+      if (amount > 0) toast({ title: `+${amount} XP · этаж открыт` });
+    }, 420);
   };
 
   const heroTop = (heroDay ?? standDay) === null ? 0 : floorTop((heroDay ?? standDay)!) + 80;
@@ -475,9 +468,15 @@ export function TowerBoard() {
                 Здоровье {focus.healthDelta > 0 ? `+${focus.healthDelta}` : focus.healthDelta}
               </p>
             )}
+            {focus.state === "missed" && (
+              <p className="mt-3 text-sm text-sky-200/90">
+                В тот день не заходил — этаж в башне не открыть. Задачи можно отметить в «Сегодня», если
+                делал их без захода.
+              </p>
+            )}
             {canOpen && (
               <Button className="mt-3 h-11 w-full" onClick={openFocused}>
-                {focus.state === "today" && !opened ? "Открыть этаж" : "Открыть день"}
+                Открыть этаж
               </Button>
             )}
           </div>
