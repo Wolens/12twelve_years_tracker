@@ -118,10 +118,28 @@ export function buildTower(input: {
   return { weeks, days };
 }
 
-/** Герой на этаже календарного дня цикла (1–84), время идёт вверх независимо от ритуала. */
-export function heroStandDay(todayDay: number | null): number | null {
+/** Верхняя граница этажа: рабочая неделя и «коридор» после последней закрытой с бонусом. */
+export function heroProgressCap(
+  weeks: { number: number; bonusAwarded?: boolean }[],
+  activeWeek: number
+): number {
+  let lastBonus = 0;
+  for (const w of weeks) {
+    if (w.bonusAwarded && w.number > lastBonus) lastBonus = w.number;
+  }
+  const afterClosed = Math.min(CYCLE_DAYS, (lastBonus + 1) * 7);
+  const activeCap = Math.min(CYCLE_DAYS, Math.min(12, Math.max(1, activeWeek)) * 7);
+  return Math.min(afterClosed, activeCap);
+}
+
+/** Герой: календарный день, но не выше прогресса по неделям. */
+export function heroStandDay(
+  todayDay: number | null,
+  activeWeek: number,
+  weeks: { number: number; bonusAwarded?: boolean }[]
+): number | null {
   if (todayDay === null || todayDay < 1) return null;
-  return todayDay;
+  return Math.min(todayDay, heroProgressCap(weeks, activeWeek));
 }
 
 /** Пролёт наверх из этой недели сложен, если неделю закрыли. Первая неделя стоит на фундаменте. */

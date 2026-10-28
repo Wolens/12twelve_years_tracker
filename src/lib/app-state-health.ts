@@ -140,7 +140,7 @@ export function repairAppState(state: AppState): AppState {
     next = { ...next, onboardingComplete: true };
   }
 
-  const closedWeeks = next.weeks.filter((w) => w.closed).map((w) => w.number);
+  const closedWeeks = next.weeks.filter((w) => w.bonusAwarded).map((w) => w.number);
   if (closedWeeks.length > 0 && next.activeWeek === 1) {
     const maxClosed = Math.max(...closedWeeks);
     next = {

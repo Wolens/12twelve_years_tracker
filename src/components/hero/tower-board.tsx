@@ -197,6 +197,7 @@ export function TowerBoard() {
   const promptedOpen = useRef(false);
   const scrolled = useRef(false);
   const columnRef = useRef<HTMLDivElement>(null);
+  const activeWeek = useAppStore((s) => s.activeWeek);
   const claimedFloorChests = useAppStore((s) => s.character.claimedFloorChests ?? EMPTY_CHESTS);
   const todayDay = here === null ? null : here + 1;
   const [range, setRange] = useState(() => windowAround(todayDay));
@@ -204,7 +205,10 @@ export function TowerBoard() {
   rangeRef.current = range;
 
   const closed = useMemo(
-    () => Array.from({ length: 12 }, (_, i) => weeks.some((w) => w.number === i + 1 && w.closed)),
+    () =>
+      Array.from({ length: 12 }, (_, i) =>
+        weeks.some((w) => w.number === i + 1 && w.bonusAwarded)
+      ),
     [weeks]
   );
 
@@ -217,13 +221,13 @@ export function TowerBoard() {
   const slumped = vitality < 85 && !opened;
   const weather = !opened && vitality < 96;
   const dayNumber = index < 0 ? 0 : Math.min(CYCLE_DAYS, index + 1);
-  const standDay = heroStandDay(todayDay);
+  const standDay = heroStandDay(todayDay, activeWeek, weeks);
 
   useEffect(() => {
     if (todayDay === null || climbing) return;
-    const day = heroStandDay(todayDay);
+    const day = heroStandDay(todayDay, activeWeek, weeks);
     if (day !== null) setHeroDay(day);
-  }, [todayDay, climbing]);
+  }, [todayDay, activeWeek, weeks, climbing]);
 
   useEffect(() => {
     if (here === null || opened || promptedOpen.current) return;
@@ -306,17 +310,18 @@ export function TowerBoard() {
 
   const openFocused = () => {
     if (!focus || todayDay === null || focus.state !== "today" || opened) return;
-    const from = Math.max(1, todayDay - 1);
+    const settled = heroStandDay(todayDay, activeWeek, weeks) ?? todayDay;
+    const from = Math.max(1, settled - 1);
     setPicked(null);
     setClimbing(true);
     setHeroDay(from);
     const amount = claimDailyRitual();
     requestAnimationFrame(() => {
-      requestAnimationFrame(() => setHeroDay(todayDay));
+      requestAnimationFrame(() => setHeroDay(settled));
     });
     window.setTimeout(() => {
       setClimbing(false);
-      setHeroDay(todayDay);
+      setHeroDay(heroStandDay(todayDay, activeWeek, weeks) ?? todayDay);
       if (amount > 0) toast({ title: `+${amount} XP · этаж открыт` });
     }, 420);
   };

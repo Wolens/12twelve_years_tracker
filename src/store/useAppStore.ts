@@ -238,9 +238,11 @@ function recomputeWeekClosed(
 ): WeekData[] {
   return weeks.map((w) => {
     const weekTasks = cycleTasks.filter((t) => t.week === w.number);
+    if (w.bonusAwarded) return { ...w, closed: true };
     if (weekTasks.length === 0) return w;
     const allDone = weekTasks.every((t) => t.done);
-    return { ...w, closed: allDone || w.closed };
+    if (!allDone && w.closed) return { ...w, closed: false };
+    return w;
   });
 }
 

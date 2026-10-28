@@ -34,6 +34,9 @@ function mergePreferringIdentity(
     weekFilterSphereId: resolveSphereFilterId(local.spheres, local.weekFilterSphereId),
     goalsFilterSphereId: resolveSphereFilterId(local.spheres, local.goalsFilterSphereId),
     theme: local.theme,
+    activeWeek: local.activeWeek,
+    activeDay: local.activeDay,
+    weeks: local.weeks,
   };
 }
 

@@ -33,9 +33,7 @@ export function WeekStrip({ activeWeek, weeks, selectedWeek, onSelect }: Props) 
                 isCurrent && !isSelected && "ring-1 ring-primary/50"
               )}
             >
-              {w.closed && (isPast || w.number < activeWeek) ? (
-                <Check className="h-4 w-4 text-primary" />
-              ) : w.closed ? (
+              {w.bonusAwarded ? (
                 <Check className="h-4 w-4 text-primary" />
               ) : (
                 <span>{w.number}</span>
