@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { ShoppingBag, Target, User } from "lucide-react";
-import { CharacterSetupDialog } from "@/components/hero/character-setup-dialog";
 import { HeroMasthead } from "@/components/hero/hero-masthead";
 import { HeroPanel, ShopPanel } from "@/components/hero/hero-tab-panels";
 import { HeroGoalsPanel } from "@/components/hero/hero-goals-panel";
@@ -46,7 +45,6 @@ export function HeroScreen() {
 
   return (
     <div className="space-y-4 px-4 pt-4 pb-8">
-      <CharacterSetupDialog />
       <HeroMasthead onOpenShop={openShop} />
 
       <div

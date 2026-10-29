@@ -14,9 +14,18 @@ import { BottomNav } from "./bottom-nav";
 import { TabCache } from "./tab-cache";
 import { subscribeNavPending } from "./nav-pending";
 import { cn } from "@/lib/utils";
+import { normalizeCharacter } from "@/lib/rpg/normalize-game";
 
 const OnboardingTour = dynamic(
   () => import("@/components/onboarding/onboarding-tour").then((m) => m.OnboardingTour),
+  { ssr: false }
+);
+
+const CharacterSetupDialog = dynamic(
+  () =>
+    import("@/components/hero/character-setup-dialog").then(
+      (m) => m.CharacterSetupDialog
+    ),
   { ssr: false }
 );
 
@@ -70,6 +79,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const onboardingComplete = useAppStore((s) => s.onboardingComplete);
   const tourComplete = useAppStore((s) => s.tourComplete);
+  const identitySetupDone = useAppStore(
+    (s) => normalizeCharacter(s.character).identitySetupDone
+  );
   const ready = useHydrated();
   const authInitialized = useAuthStore((s) => s.initialized);
   const isOnboarding = pathname === "/onboarding";
@@ -113,6 +125,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
     const state = useAppStore.getState();
     if (!state.onboardingComplete || !state.tourComplete) return;
+    if (!normalizeCharacter(state.character).identitySetupDone) return;
     if (ritualClaimedToday(state.profile)) return;
     if (hasDailyEntryRouted()) return;
     if (pathname === "/onboarding" || pathname.startsWith("/auth")) return;
@@ -163,7 +176,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       )}
       <TabCache>{children}</TabCache>
       <BottomNav />
-      {onboardingComplete && !tourComplete && <OnboardingTour />}
+      {onboardingComplete && !identitySetupDone && !isOnboarding && (
+        <CharacterSetupDialog />
+      )}
+      {onboardingComplete && identitySetupDone && !tourComplete && (
+        <OnboardingTour />
+      )}
     </div>
   );
 }

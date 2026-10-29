@@ -11,18 +11,13 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useAppStore } from "@/store/useAppStore";
-import { normalizeCharacter, resolveLegacyCharacterIdentity } from "@/lib/rpg/normalize-game";
-import { hasUserProgress } from "@/lib/app-state-health";
+import { normalizeCharacter } from "@/lib/rpg/normalize-game";
 import type { CharacterGender } from "@/types/rpg";
 import { cn } from "@/lib/utils";
 
 export function CharacterSetupDialog() {
-  const done = useAppStore((s) =>
-    resolveLegacyCharacterIdentity(
-      normalizeCharacter(s.character),
-      s.profile,
-      hasUserProgress(s)
-    ).identitySetupDone
+  const done = useAppStore(
+    (s) => normalizeCharacter(s.character).identitySetupDone
   );
   const setupIdentity = useAppStore((s) => s.setupCharacterIdentity);
   const [gender, setGender] = useState<CharacterGender>("male");
@@ -33,7 +28,7 @@ export function CharacterSetupDialog() {
   return (
     <Dialog open={true}>
       <DialogContent
-        className="game-surface border-white/10 sm:max-w-md"
+        className="game-surface z-[85] border-white/10 sm:max-w-md [&>button]:hidden"
         onPointerDownOutside={(e) => e.preventDefault()}
       >
         <DialogHeader>
