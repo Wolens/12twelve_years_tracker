@@ -43,6 +43,7 @@ import { migrateAppState } from "@/lib/migrate";
 import { resolveSphereFilterId } from "@/lib/sphere-filter-default";
 import { assignGoalToDay, removeGoalFromWeekPlan } from "@/lib/day-plan";
 import { hasUserProgress, repairAppState } from "@/lib/app-state-health";
+import { syncNow } from "@/lib/sync-timestamp";
 import {
   dailyQuestBonusAmount,
   reconcileProfileDailyEngagement,
@@ -571,7 +572,7 @@ export const useAppStore = create<Store>()(
       addSphere: (sphere) =>
         set((s) => {
           const id = generateId();
-          const spheres = [...s.spheres, { ...sphere, id, custom: true }];
+          const spheres = [...s.spheres, { ...sphere, id, custom: true, updatedAt: syncNow() }];
           const isFirst = s.spheres.length === 0;
           return {
             spheres,
@@ -608,7 +609,7 @@ export const useAppStore = create<Store>()(
       updateSphere: (id, patch) =>
         set((s) => ({
           spheres: s.spheres.map((sp) =>
-            sp.id === id ? { ...sp, ...patch } : sp
+            sp.id === id ? { ...sp, ...patch, updatedAt: syncNow() } : sp
           ),
         })),
 
@@ -640,13 +641,16 @@ export const useAppStore = create<Store>()(
               ...goal,
               id: generateId(),
               done: goal.type === "onetime" ? goal.done ?? false : goal.done,
+              updatedAt: syncNow(),
             },
           ],
         })),
 
       updateGoal: (id, patch) =>
         set((s) => ({
-          goals: s.goals.map((g) => (g.id === id ? { ...g, ...patch } : g)),
+          goals: s.goals.map((g) =>
+            g.id === id ? { ...g, ...patch, updatedAt: syncNow() } : g
+          ),
         })),
 
       deleteGoal: (id) =>
@@ -676,11 +680,12 @@ export const useAppStore = create<Store>()(
 
           const goals = s.goals.map((g) => {
             if (g.id !== goalId) return g;
+            const stamp = syncNow();
             if (g.type === "onetime") {
               const next = !(g.done ?? false);
-              return { ...g, done: next, completed: next };
+              return { ...g, done: next, completed: next, updatedAt: stamp };
             }
-            return g;
+            return { ...g, updatedAt: stamp };
           });
 
           const next = goals.find((g) => g.id === goalId);
@@ -722,6 +727,7 @@ export const useAppStore = create<Store>()(
               ...task,
               id: generateId(),
               done: false,
+              updatedAt: syncNow(),
             },
           ];
           return { cycleTasks, weeks: recomputeWeekClosed(cycleTasks, s.weeks) };
@@ -730,7 +736,7 @@ export const useAppStore = create<Store>()(
       updateCycleTask: (taskId, patch) =>
         set((s) => {
           const cycleTasks = s.cycleTasks.map((t) =>
-            t.id === taskId ? { ...t, ...patch } : t
+            t.id === taskId ? { ...t, ...patch, updatedAt: syncNow() } : t
           );
           return { cycleTasks, weeks: recomputeWeekClosed(cycleTasks, s.weeks) };
         }),
@@ -740,7 +746,7 @@ export const useAppStore = create<Store>()(
           const prev = s.cycleTasks.find((t) => t.id === taskId);
           if (!prev) return s;
           const cycleTasks = s.cycleTasks.map((t) =>
-            t.id === taskId ? { ...t, done: !t.done } : t
+            t.id === taskId ? { ...t, done: !t.done, updatedAt: syncNow() } : t
           );
           const nowDone = !prev.done;
           let profile = s.profile;
@@ -1067,6 +1073,7 @@ export const useAppStore = create<Store>()(
           dayAssignments: s.dayAssignments,
           character: s.character,
           seasonFlame: s.seasonFlame,
+          cloudTouchAt: s.cloudTouchAt,
         };
       },
 
@@ -1140,6 +1147,7 @@ export const useAppStore = create<Store>()(
         dayAssignments: state.dayAssignments,
         character: state.character,
         seasonFlame: state.seasonFlame,
+        cloudTouchAt: state.cloudTouchAt,
       }),
     }
   )

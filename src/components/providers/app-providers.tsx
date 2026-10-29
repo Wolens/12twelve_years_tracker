@@ -9,6 +9,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { achievementsNeedSync, syncProfileAchievements } from "@/lib/achievements";
 import {
   hydrateAppStateFromCloud,
+  pullCloudStateIntoApp,
   saveCloudAppStateSafe,
 } from "@/lib/cloud-sync";
 import {
@@ -129,6 +130,29 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
       clearTimeout(syncTimer);
       window.removeEventListener("beforeunload", flush);
       flush();
+    };
+  }, [userId]);
+
+  useEffect(() => {
+    if (!userId) return;
+    if (hydratedForUser.current !== userId) return;
+
+    let pullTimer: ReturnType<typeof setTimeout> | undefined;
+    const schedulePull = () => {
+      if (document.visibilityState !== "visible") return;
+      clearTimeout(pullTimer);
+      pullTimer = setTimeout(() => {
+        void pullCloudStateIntoApp(userId);
+      }, 400);
+    };
+
+    document.addEventListener("visibilitychange", schedulePull);
+    window.addEventListener("focus", schedulePull);
+
+    return () => {
+      clearTimeout(pullTimer);
+      document.removeEventListener("visibilitychange", schedulePull);
+      window.removeEventListener("focus", schedulePull);
     };
   }, [userId]);
 

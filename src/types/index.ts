@@ -8,6 +8,8 @@ export type Sphere = {
   icon: string;
   color: string;
   custom?: boolean;
+  /** ISO — для синхронизации между устройствами */
+  updatedAt?: string;
   /** Описание цели на 12 недель */
   description?: string;
   /** Начальное значение (число, для анализа) */
@@ -33,6 +35,7 @@ export type CycleTask = {
   week: number;
   title: string;
   done: boolean;
+  updatedAt?: string;
 };
 
 export type Goal = {
@@ -50,6 +53,7 @@ export type Goal = {
   measurements?: MeasurementEntry[];
   done?: boolean;
   completed?: boolean;
+  updatedAt?: string;
 };
 
 export type WeekReflection = {
@@ -143,6 +147,8 @@ export type AppState = {
   dayAssignments: DayAssignments;
   character: CharacterState;
   seasonFlame: SeasonFlameState;
+  /** ISO — метка последнего сохранения снимка (синхронизация) */
+  cloudTouchAt?: string;
 };
 
 export const STORAGE_KEY = "twelve-weeks-tracker-v1";
