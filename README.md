@@ -37,8 +37,8 @@ npm run dev
 
 | Что | Значение |
 |-----|----------|
-| Основной URL | https://curious-frangollo-7d930e.netlify.app |
-| Хостинг | [Netlify](https://www.netlify.com) (Next.js Runtime, `netlify.toml`) |
+| Основной URL | https://curious-frangollo-7d930e.netlify.app *(legacy)* → после деплоя укажи `*.workers.dev` |
+| Хостинг | **[Cloudflare Workers](docs/cloudflare.md)** (OpenNext, `wrangler.toml`); legacy — [Netlify](https://www.netlify.com) (`netlify.toml`) |
 | Репозиторий | https://github.com/Wolens/12twelve_years_tracker |
 | Бэкенд | Supabase Auth + таблица `public.user_profiles` (`app_state` jsonb), схема в `supabase/schema.sql` |
 | Доступ к сайту | Netlify **Visitor access → Public** (не Private) |
@@ -46,14 +46,15 @@ npm run dev
 Permalink отдельного деплоя (не обязательно основной домен):  
 https://6adcdd46978ce9f88d6e13fc--curious-frangollo-7d930e.netlify.app/
 
-**Переменные окружения** (локально `.env.local`, на Netlify в UI — не в git):
+**Переменные окружения** (локально `.env.local`, на Cloudflare / Netlify в UI — не в git):
 
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY` (значение = Publishable key в Supabase)
 
 **Supabase Auth → Redirect URLs** должны включать:
 
-- `https://curious-frangollo-7d930e.netlify.app/auth/callback`
+- `https://curious-frangollo-7d930e.netlify.app/auth/callback` *(если Netlify ещё используется)*
+- `https://<твой-worker>.workers.dev/auth/callback` *(Cloudflare — см. [docs/cloudflare.md](docs/cloudflare.md))*
 - `http://localhost:3000/auth/callback` (для разработки)
 
 **Синхронизация данных:** гость — `localStorage` (`useAppStore`); после входа — загрузка/сохранение в Supabase (`src/lib/cloud-sync.ts`, `useAuthStore` + `app-providers.tsx`).
