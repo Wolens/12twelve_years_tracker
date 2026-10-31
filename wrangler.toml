@@ -1,4 +1,4 @@
-name = "twelve-weeks-tracker"
+name = "12twelve-years-tracker"
 main = ".open-next/worker.js"
 upload_source_maps = true
 compatibility_date = "2026-10-31"
@@ -10,7 +10,7 @@ binding = "ASSETS"
 
 [[services]]
 binding = "WORKER_SELF_REFERENCE"
-service = "twelve-weeks-tracker"
+service = "12twelve-years-tracker"
 
 [observability]
 enabled = true

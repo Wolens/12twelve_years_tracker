@@ -65,4 +65,4 @@ npm run preview:cloudflare
 ## Версии
 
 - `@opennextjs/cloudflare@1.15.x` — последняя ветка с **Next.js 14** (новее требует Next 15+).
-- `wrangler.toml`: `nodejs_compat`, worker `twelve-weeks-tracker`.
+- `wrangler.toml`: worker **`12twelve-years-tracker`** — имя должно совпадать с проектом в Cloudflare Workers и с `WORKER_SELF_REFERENCE`.
