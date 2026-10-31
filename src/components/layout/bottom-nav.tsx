@@ -7,6 +7,7 @@ import { BarChart3, CalendarDays, User, Sun, Route } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { subscribeTourNav } from "@/components/onboarding/tour-highlight";
 import { setNavPending, subscribeNavPending } from "./nav-pending";
+import { preloadTab } from "./tab-pages";
 
 const links = [
   { href: "/today", label: "Сегодня", icon: Sun, tourNav: "today" },
@@ -56,6 +57,7 @@ export function BottomNav() {
               href={href}
               prefetch
               scroll={false}
+              onPointerDown={() => preloadTab(href)}
               onClick={() => markPending(href)}
               data-tour={`nav-${id}`}
               className={cn(

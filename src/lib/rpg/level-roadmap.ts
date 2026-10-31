@@ -30,9 +30,8 @@ export const LEVEL_MILESTONES: LevelMilestone[] = [
   },
   {
     level: 10,
-    title: "Выбор облика",
-    description: "Вампир, ведьма, фея, джедай, рыцарь или друид. Облик меняет внешность и дар.",
-    unlock: "race",
+    title: "Опытный странник",
+    description: "Больше монет за задачи и закрытие недель",
   },
   {
     level: 15,

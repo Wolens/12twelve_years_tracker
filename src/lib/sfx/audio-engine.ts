@@ -2,22 +2,31 @@ const SOUND_PREF_KEY = "twelve-weeks-sound-enabled";
 const SOUND_VOLUME_KEY = "twelve-weeks-sound-volume";
 
 let sharedCtx: AudioContext | null = null;
+let storedVolume: number | null = null;
 
 function reducedMotion(): boolean {
   return typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
-export function getSoundVolumePercent(): number {
-  if (typeof window === "undefined") return 100;
-  if (reducedMotion()) return 0;
+function readStoredVolume(): number {
+  if (storedVolume !== null) return storedVolume;
   const storedVol = localStorage.getItem(SOUND_VOLUME_KEY);
   if (storedVol !== null) {
     const n = Number(storedVol);
-    if (!Number.isNaN(n)) return Math.max(0, Math.min(100, Math.round(n)));
+    if (!Number.isNaN(n)) {
+      storedVolume = Math.max(0, Math.min(100, Math.round(n)));
+      return storedVolume;
+    }
   }
   const legacy = localStorage.getItem(SOUND_PREF_KEY);
-  if (legacy === "0") return 0;
-  return 100;
+  storedVolume = legacy === "0" ? 0 : 100;
+  return storedVolume;
+}
+
+export function getSoundVolumePercent(): number {
+  if (typeof window === "undefined") return 100;
+  if (reducedMotion()) return 0;
+  return readStoredVolume();
 }
 
 /** 0…1 для Web Audio gain. */
@@ -28,6 +37,7 @@ export function getSoundVolume(): number {
 export function setSoundVolumePercent(percent: number) {
   if (typeof window === "undefined") return;
   const p = Math.max(0, Math.min(100, Math.round(percent)));
+  storedVolume = p;
   localStorage.setItem(SOUND_VOLUME_KEY, String(p));
   localStorage.setItem(SOUND_PREF_KEY, p > 0 ? "1" : "0");
 }

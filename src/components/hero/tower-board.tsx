@@ -130,7 +130,7 @@ function heroScrollHint(column: HTMLElement, day: number): "up" | "down" | null 
   return null;
 }
 
-function TowerAtmosphere({ progress }: { progress: number }) {
+function TowerAtmosphere({ progress, active }: { progress: number; active: boolean }) {
   const [lift, setLift] = useState(0);
   const [near, setNear] = useState(0);
   const [spire, setSpire] = useState<HTMLElement | null>(null);
@@ -140,6 +140,7 @@ function TowerAtmosphere({ progress }: { progress: number }) {
   }, []);
 
   useEffect(() => {
+    if (!active) return;
     let raf = 0;
     let lastLift = -1;
     let lastNear = -1;
@@ -166,7 +167,7 @@ function TowerAtmosphere({ progress }: { progress: number }) {
       cancelAnimationFrame(raf);
       window.removeEventListener("scroll", onScroll);
     };
-  }, []);
+  }, [active]);
 
   const mist = Math.max(0.08, (1 - progress * 0.85) * (1 - near * 0.92));
 
@@ -287,6 +288,7 @@ export function TowerBoard() {
   }, [pathActive, standDay]);
 
   useEffect(() => {
+    if (!pathActive) return;
     const column = columnRef.current;
     if (!column) return;
     let raf = 0;
@@ -367,7 +369,7 @@ export function TowerBoard() {
   return (
     <section className="path-world relative min-h-[100dvh] bg-[#06080c]" aria-label="Башня из 84 этажей">
       <TowerSvgDefs />
-      <TowerAtmosphere progress={progress} />
+      <TowerAtmosphere progress={progress} active={pathActive} />
 
       <header className="pointer-events-none fixed inset-x-0 top-0 z-40 flex justify-center px-3 pt-[max(0.25rem,env(safe-area-inset-top))] md:pt-3">
         <div className="pointer-events-auto flex w-full max-w-lg items-center justify-between gap-2 pr-12 md:max-w-4xl">

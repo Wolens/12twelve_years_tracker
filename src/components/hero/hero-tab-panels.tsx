@@ -4,10 +4,9 @@ import { memo, useRef, useState } from "react";
 import { ChevronDown, Heart, Swords } from "lucide-react";
 import { useAppStore } from "@/store/useAppStore";
 import { xpProgressInLevel } from "@/lib/gamification";
-import { GAME_ITEMS, RACES } from "@/lib/rpg/catalog";
-import { canSelectRace, computeCharacterStats } from "@/lib/rpg/character-stats";
+import { GAME_ITEMS } from "@/lib/rpg/catalog";
+import { computeCharacterStats } from "@/lib/rpg/character-stats";
 import { normalizeCharacter } from "@/lib/rpg/normalize-game";
-import { RacePicker } from "@/components/hero/race-picker";
 import { chestTierLabel } from "@/lib/rpg/chest-roll";
 import type { EquipSlot } from "@/types/rpg";
 import { ItemCard } from "@/components/hero/item-card";
@@ -71,12 +70,6 @@ export const HeroPanel = memo(function HeroPanel({ onOpenShop }: { onOpenShop: (
           <p className="font-display text-3xl font-bold text-sky-900 dark:text-sky-100">{stats.strength}</p>
         </div>
       </div>
-
-      <p className="text-center text-xs text-muted-foreground">
-        {RACES[character.race].name} · {RACES[character.race].perk}
-      </p>
-
-      {canSelectRace(level) && <RacePicker />}
 
       {character.pendingChests.length > 0 && (
         <div className="space-y-2">
@@ -170,7 +163,7 @@ export const HeroPanel = memo(function HeroPanel({ onOpenShop }: { onOpenShop: (
   );
 });
 
-export const ShopPanel = memo(function ShopPanel() {
+export const ShopPanel = memo(function ShopPanel(_props: { embedded?: boolean } = {}) {
   const raw = useAppStore((s) => s.character);
   const character = normalizeCharacter(raw);
   const level = useAppStore((s) => xpProgressInLevel(s.profile.xp).level);
@@ -182,7 +175,6 @@ export const ShopPanel = memo(function ShopPanel() {
       {SLOTS.map((slot) => {
         const catalog = GAME_ITEMS.filter((item) => item.slot === slot.id && item.price > 0);
         const shopItems = catalog.filter((item) => !character.inventory.includes(item.id));
-        const ownedCount = catalog.length - shopItems.length;
         const isOpen = !!openSlots[slot.id];
         return (
           <div
@@ -197,7 +189,7 @@ export const ShopPanel = memo(function ShopPanel() {
             >
               <h2 className="min-w-0 flex-1 text-sm font-medium">{slot.title}</h2>
               <span className="text-[11px] text-muted-foreground">
-                {shopItems.length} в продаже · у тебя {ownedCount}
+                {shopItems.length} в продаже
               </span>
               <ChevronDown
                 className={cn(

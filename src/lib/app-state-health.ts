@@ -155,6 +155,8 @@ export function repairAppState(state: AppState): AppState {
 
   return {
     ...next,
+    habits: next.habits ?? [],
+    habitCompletions: next.habitCompletions ?? {},
     profile: reconcileProfileDailyEngagement(next.profile),
     weekFilterSphereId:
       next.weekFilterSphereId === resolvedWeekFilter ? next.weekFilterSphereId : resolvedWeekFilter,

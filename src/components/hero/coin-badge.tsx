@@ -37,7 +37,7 @@ export function CoinBadge({
   }
 
   return (
-    <Link href="/hero?tab=shop" scroll={false} className={cn("coin-badge", className)} aria-label={label}>
+    <Link href="/hero" scroll={false} className={cn("coin-badge", className)} aria-label={label}>
       {body}
     </Link>
   );

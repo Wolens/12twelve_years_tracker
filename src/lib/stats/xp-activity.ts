@@ -8,6 +8,7 @@ export type XpSourceBucket =
   | "ritual"
   | "quest"
   | "goal"
+  | "habits"
   | "other";
 
 export function classifyXpSource(sourceId: string | undefined): XpSourceBucket {
@@ -16,6 +17,7 @@ export function classifyXpSource(sourceId: string | undefined): XpSourceBucket {
   if (sourceId.startsWith("week_close:")) return "week_close";
   if (sourceId.startsWith("daily_ritual:")) return "ritual";
   if (sourceId.startsWith("daily_quest:")) return "quest";
+  if (sourceId.startsWith("habit:")) return "habits";
   if (sourceId.startsWith("onetime_goal:") || sourceId.startsWith("goal_complete:"))
     return "goal";
   return "other";
@@ -27,6 +29,7 @@ const BUCKET_LABELS: Record<XpSourceBucket, string> = {
   ritual: "Ритуал дня",
   quest: "Квест дня",
   goal: "Цели (архив)",
+  habits: "Привычки",
   other: "Прочее",
 };
 
@@ -81,6 +84,7 @@ export function xpBySourceBucket(
     ritual: 0,
     quest: 0,
     goal: 0,
+    habits: 0,
     other: 0,
   };
   for (const e of filtered) {
@@ -148,6 +152,7 @@ export function xpBySourceBucketFromLedger(
     ritual: 0,
     quest: 0,
     goal: 0,
+    habits: 0,
     other: 0,
   };
   for (const e of ledger ?? []) {

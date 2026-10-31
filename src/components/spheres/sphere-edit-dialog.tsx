@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -36,12 +36,15 @@ export function SphereEditDialog({ sphere, trigger, allowDelete }: Props) {
   const [icon, setIcon] = useState(() => preserveSphereIcon(sphere.icon));
   const [color, setColor] = useState(sphere.color);
 
+  const wasOpen = useRef(false);
   useEffect(() => {
-    if (!open) return;
+    const justOpened = open && !wasOpen.current;
+    wasOpen.current = open;
+    if (!justOpened) return;
     setName(sphere.name);
     setIcon(preserveSphereIcon(sphere.icon));
     setColor(sphere.color || SPHERE_COLORS[0]);
-  }, [open, sphere.id, sphere.name, sphere.icon]);
+  }, [open, sphere.id, sphere.name, sphere.icon, sphere.color]);
 
   const save = () => {
     if (!name.trim()) return;

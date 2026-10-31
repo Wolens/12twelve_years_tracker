@@ -64,7 +64,9 @@ export async function pullCloudStateIntoApp(userId: string): Promise<boolean> {
   const remote = await fetchCloudAppState(userId);
   if (!remote || isAppStateEmpty(remote)) return false;
   const local = repairAppState(useAppStore.getState().exportState());
-  const merged = mergeAndApply(local, remote);
+  const merged = repairAppState(
+    mergeAppStateForSync(local, remote, { preferLocalUi: true })
+  );
   useAppStore.getState().importState(merged);
   return true;
 }

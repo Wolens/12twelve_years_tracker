@@ -26,6 +26,10 @@ export function xpSourceWeekClose(week: number): string {
   return `week_close:${week}`;
 }
 
+export function xpSourceHabit(habitId: string, dateISO: string): string {
+  return `habit:${habitId}:${dateISO}`;
+}
+
 export function totalXpFromLedger(ledger: XpLedgerEntry[]): number {
   return Math.max(0, ledger.reduce((sum, e) => sum + e.amount, 0));
 }

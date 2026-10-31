@@ -1,5 +1,8 @@
 import { rmSync } from "node:fs";
 import { spawn } from "node:child_process";
+import { stopStaleDevServers } from "./stop-stale-dev.mjs";
+
+stopStaleDevServers();
 
 rmSync(".next", { recursive: true, force: true });
 console.log("Removed .next — starting next dev…\n");

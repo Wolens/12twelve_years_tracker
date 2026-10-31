@@ -3,7 +3,8 @@ import type { AchievementId } from "@/types";
 
 export function xpForLevel(level: number): number {
   if (level < 1) return 0;
-  return Math.round(100 * Math.pow(level, 1.5));
+  /** К концу 12 недель (задачи + закрытия) уровень ~12–16, без гринда до 100. */
+  return Math.round(55 + level * 38);
 }
 
 export function totalXpForLevel(level: number): number {

@@ -1,4 +1,5 @@
-import { checkLevelAchievements } from "@/lib/gamification";
+import { checkLevelAchievements, todayISO } from "@/lib/gamification";
+import { habitStreak } from "@/lib/habits";
 import { GAME_ITEMS } from "@/lib/rpg/catalog";
 import type { AchievementId, AppState, Profile } from "@/types";
 
@@ -20,13 +21,14 @@ const ACHIEVEMENT_ORDER: AchievementId[] = [
   "level_25",
   "level_50",
   "level_100",
+  "habit_streak_7",
 ];
 
 const SHOP_ITEM_IDS = new Set(GAME_ITEMS.filter((item) => item.price > 0).map((item) => item.id));
 
 type AchievementState = Pick<
   AppState,
-  "onboardingComplete" | "goals" | "weeks" | "spheres" | "profile" | "cycleTasks"
+  "onboardingComplete" | "goals" | "weeks" | "spheres" | "profile" | "cycleTasks" | "habits" | "habitCompletions"
 > & {
   character?: AppState["character"];
 };
@@ -47,7 +49,7 @@ function ritualDays(profile: Profile): number {
 }
 
 export function computeEarnedAchievements(state: AchievementState): AchievementId[] {
-  const { weeks, spheres, profile, cycleTasks, character } = state;
+  const { weeks, spheres, profile, cycleTasks, character, habits, habitCompletions } = state;
   const earned = new Set<AchievementId>();
 
   const rituals = ritualDays(profile);
@@ -90,18 +92,64 @@ export function computeEarnedAchievements(state: AchievementState): AchievementI
   if (profile.streak >= 7) earned.add("streak_7");
   if (profile.streak >= 30) earned.add("streak_30");
 
-  for (const id of checkLevelAchievements(profile.level, [])) {
+  const today = todayISO();
+  for (const h of habits ?? []) {
+    if (h.archived) continue;
+    if (habitStreak(h, habitCompletions ?? {}, today) >= 7) {
+      earned.add("habit_streak_7");
+      break;
+    }
+  }
+
+  for (const id of checkLevelAchievements(
+    profile.level,
+    profile.achievements.filter(
+      (id): id is AchievementId =>
+        id === "level_10" ||
+        id === "level_25" ||
+        id === "level_50" ||
+        id === "level_100"
+    )
+  )) {
     earned.add(id);
   }
 
   return ACHIEVEMENT_ORDER.filter((id) => earned.has(id));
 }
 
+/** Не показываются в списке, но хранятся в profile (онбординг, демо, первые логи). */
+const PERSISTENT_EXTRA_ACHIEVEMENTS: AchievementId[] = [
+  "onboarding_done",
+  "demo_loaded",
+  "first_counter_log",
+  "first_metric_log",
+];
+
+function mergeAchievementLists(
+  profile: Profile,
+  earned: AchievementId[]
+): AchievementId[] {
+  const extras = profile.achievements.filter((id) =>
+    PERSISTENT_EXTRA_ACHIEVEMENTS.includes(id as AchievementId)
+  );
+  const merged = [...earned];
+  for (const id of extras) {
+    if (!merged.includes(id)) merged.push(id);
+  }
+  return merged;
+}
+
 export function syncProfileAchievements(state: AchievementState): Profile {
-  const achievements = computeEarnedAchievements(state);
+  const earned = computeEarnedAchievements(state);
+  const achievements = mergeAchievementLists(state.profile, earned);
+  if (setsEqual(state.profile.achievements, achievements)) {
+    return state.profile;
+  }
   return { ...state.profile, achievements };
 }
 
 export function achievementsNeedSync(state: AchievementState): boolean {
-  return !setsEqual(state.profile.achievements, computeEarnedAchievements(state));
+  const earned = computeEarnedAchievements(state);
+  const merged = mergeAchievementLists(state.profile, earned);
+  return !setsEqual(state.profile.achievements, merged);
 }

@@ -35,6 +35,8 @@ export type CycleTask = {
   week: number;
   title: string;
   done: boolean;
+  /** День недели цикла 1–7 (Пн–Вс), когда задача запланирована */
+  planDay?: number;
   updatedAt?: string;
 };
 
@@ -70,6 +72,26 @@ export type WeekData = {
   bonusAwarded?: boolean;
 };
 
+/** ISO date → id привычек, отмеченных в этот день */
+export type HabitCompletions = Record<string, string[]>;
+
+export type HabitScope = "cycle" | "persistent";
+
+export type HabitSchedule =
+  | { kind: "daily" }
+  | { kind: "weekly"; weekdays: number[] };
+
+export type Habit = {
+  id: string;
+  title: string;
+  schedule: HabitSchedule;
+  scope: HabitScope;
+  archived?: boolean;
+  updatedAt?: string;
+  /** Устарело: раньше привязка к цели; при миграции v16 снимается */
+  sphereId?: string;
+};
+
 export type AchievementId =
   | "first_week_closed"
   | "streak_7"
@@ -90,7 +112,8 @@ export type AchievementId =
   | "first_counter_log"
   | "first_metric_log"
   | "onboarding_done"
-  | "demo_loaded";
+  | "demo_loaded"
+  | "habit_streak_7";
 
 export type XpLedgerEntry = {
   id: string;
@@ -145,6 +168,8 @@ export type AppState = {
   /** Выбранная цель на странице «Цели». */
   goalsFilterSphereId: string;
   dayAssignments: DayAssignments;
+  habits: Habit[];
+  habitCompletions: HabitCompletions;
   character: CharacterState;
   seasonFlame: SeasonFlameState;
   /** ISO — метка последнего сохранения снимка (синхронизация) */
@@ -153,4 +178,4 @@ export type AppState = {
 
 export const STORAGE_KEY = "twelve-weeks-tracker-v1";
 export const AUTH_STORAGE_KEY = "twelve-weeks-auth-v1";
-export const DATA_VERSION = 13;
+export const DATA_VERSION = 16;

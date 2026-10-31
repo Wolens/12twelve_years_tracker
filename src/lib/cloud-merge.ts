@@ -1,4 +1,4 @@
-import type { AppState, DayAssignments, Profile, WeekData, XpLedgerEntry } from "@/types";
+import type { AppState, DayAssignments, HabitCompletions, Profile, WeekData, XpLedgerEntry } from "@/types";
 import { resolveSphereFilterId } from "@/lib/sphere-filter-default";
 import { normalizeCharacter } from "@/lib/rpg/normalize-game";
 import { reconcileProfileDailyEngagement, dedupeXpLedger } from "@/lib/daily-engagement";
@@ -81,16 +81,26 @@ export function mergeWeeksData(local: WeekData[], remote: WeekData[]): WeekData[
 
 export function mergeDayAssignments(
   local: DayAssignments,
-  remote: DayAssignments
+  remote: DayAssignments,
+  preferLocal: boolean
 ): DayAssignments {
-  const keys = Array.from(
-    new Set([...Object.keys(local), ...Object.keys(remote)])
-  );
+  const source = preferLocal ? local : remote;
   const out: DayAssignments = {};
-  for (const key of keys) {
-    const a = local[key] ?? [];
-    const b = remote[key] ?? [];
-    out[key] = Array.from(new Set([...a, ...b]));
+  for (const key of Object.keys(source ?? {})) {
+    out[key] = [...(source[key] ?? [])];
+  }
+  return out;
+}
+
+export function mergeHabitCompletions(
+  local: HabitCompletions,
+  remote: HabitCompletions,
+  preferLocal: boolean
+): HabitCompletions {
+  const source = preferLocal ? local : remote;
+  const out: HabitCompletions = {};
+  for (const key of Object.keys(source ?? {})) {
+    out[key] = [...(source[key] ?? [])];
   }
   return out;
 }
@@ -112,8 +122,11 @@ export function mergeAppStateForSync(
     remote.cycleTasks ?? []
   );
 
+  const habits = mergeRecordsByUpdatedAt(local.habits ?? [], remote.habits ?? []);
+
   const localTouch = syncTs(local.cloudTouchAt);
   const remoteTouch = syncTs(remote.cloudTouchAt);
+  const preferLocalTouch = localTouch >= remoteTouch;
   const base = remoteTouch > localTouch ? remote : local;
   const other = base === local ? remote : local;
 
@@ -123,12 +136,19 @@ export function mergeAppStateForSync(
     spheres,
     goals,
     cycleTasks,
+    habits,
     weeks: mergeWeeksData(base.weeks ?? [], other.weeks ?? []),
     profile: mergeProfiles(local.profile, remote.profile),
     character: mergeCharacterIdentity(local, remote),
     dayAssignments: mergeDayAssignments(
       local.dayAssignments ?? {},
-      remote.dayAssignments ?? {}
+      remote.dayAssignments ?? {},
+      preferLocalTouch
+    ),
+    habitCompletions: mergeHabitCompletions(
+      local.habitCompletions ?? {},
+      remote.habitCompletions ?? {},
+      preferLocalTouch
     ),
     hiddenSphereIds: unionStrings(local.hiddenSphereIds, remote.hiddenSphereIds),
     weekHiddenSphereIds: unionStrings(

@@ -102,7 +102,15 @@ export function OnboardingTour() {
       setHole(null);
       return;
     }
-    el.scrollIntoView({ block: "nearest", inline: "nearest" });
+    const rect = el.getBoundingClientRect();
+    const inView =
+      rect.top >= 8 &&
+      rect.bottom <= window.innerHeight - 8 &&
+      rect.left >= 0 &&
+      rect.right <= window.innerWidth;
+    if (!inView) {
+      el.scrollIntoView({ block: "nearest", inline: "nearest" });
+    }
     requestAnimationFrame(() => {
       requestAnimationFrame(() => setHole(measure(el)));
     });
@@ -131,12 +139,17 @@ export function OnboardingTour() {
 
   useEffect(() => {
     if (tourComplete) return;
+    let timer: ReturnType<typeof setTimeout> | undefined;
     const onWin = () => {
-      void remeasure();
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        void remeasure();
+      }, 120);
     };
     window.addEventListener("resize", onWin);
     window.addEventListener("scroll", onWin, true);
     return () => {
+      clearTimeout(timer);
       window.removeEventListener("resize", onWin);
       window.removeEventListener("scroll", onWin, true);
     };

@@ -12,7 +12,7 @@
     el.innerHTML =
       "<p style='max-width:20rem;margin:0;color:#e4e4e7'>Сборка dev-сервера обновилась, а страница загрузила старые файлы.</p>" +
       "<p style='max-width:20rem;margin:0;font-size:13px'>Нажмите <strong style='color:#34d399'>Ctrl+Shift+R</strong> (жёсткое обновление).</p>" +
-      "<p style='max-width:20rem;margin:0;font-size:12px;opacity:.85'>Если не помогло: остановите dev и запустите <code style='color:#c4b5fd'>npm run dev:clean</code></p>" +
+      "<p style='max-width:20rem;margin:0;font-size:12px;opacity:.85'>Остановите dev и снова <code style='color:#c4b5fd'>npm run dev</code>. Если не помогло — <code style='color:#c4b5fd'>npm run dev:clean</code></p>" +
       "<button type='button' style='margin-top:8px;border-radius:8px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.08);color:#fafafa;padding:10px 16px;cursor:pointer'>Обновить страницу</button>";
     el.querySelector("button").onclick = function () {
       sessionStorage.removeItem(KEY);
@@ -43,5 +43,13 @@
     sessionStorage.removeItem(KEY);
     var banner = document.getElementById(BANNER_ID);
     if (banner) banner.remove();
+
+    var bodyText = document.body && document.body.innerText;
+    if (
+      bodyText &&
+      bodyText.indexOf("missing required error components") !== -1
+    ) {
+      showStuckBanner();
+    }
   });
 })();

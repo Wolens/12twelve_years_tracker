@@ -1,18 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useAppStore } from "@/store/useAppStore";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider-simple";
 import { WeekControls } from "@/components/dashboard/week-controls";
-import { groupWeekTasksBySphere } from "@/lib/sphere-filters";
+import { groupWeekTasksByVisibleSpheres } from "@/lib/sphere-filters";
 import { WeekTaskFormDialog } from "@/components/goals/week-task-form-dialog";
+import { TodayQuestRow } from "@/components/today/today-quest-row";
+import { planDayLabel, sortCycleTasksByPlanDay } from "@/lib/cycle-task-plan";
+import { previewTaskCompletionRewards } from "@/lib/rpg/task-rewards";
 import type { CycleTask, WeekReflection } from "@/types";
-import { Pencil } from "lucide-react";
+import { SphereGlyph } from "@/components/spheres/sphere-glyph";
+import { Pencil, Trash2 } from "lucide-react";
+import { TaskRewardFlash, type TaskRewardFlashPayload } from "@/components/today/task-reward-flash";
 
 type Props = { week: number };
 
@@ -25,15 +29,15 @@ export function WeekDetail({ week }: Props) {
   const cycleTasks = useAppStore((s) => s.cycleTasks);
   const spheres = useAppStore((s) => s.spheres);
   const hiddenSphereIds = useAppStore((s) => s.weekHiddenSphereIds);
-  const weekFilterSphereId = useAppStore((s) => s.weekFilterSphereId);
   const weeks = useAppStore((s) => s.weeks);
+  const profile = useAppStore((s) => s.profile);
   const toggleCycleTask = useAppStore((s) => s.toggleCycleTask);
   const deleteCycleTask = useAppStore((s) => s.deleteCycleTask);
   const setWeekReflection = useAppStore((s) => s.setWeekReflection);
-  const closeWeek = useAppStore((s) => s.closeWeek);
   const activeWeek = useAppStore((s) => s.activeWeek);
 
   const [taskDialog, setTaskDialog] = useState<TaskDialogState>(null);
+  const [rewardFlash, setRewardFlash] = useState<TaskRewardFlashPayload | null>(null);
 
   const weekData = weeks.find((w) => w.number === week);
   const reflection = weekData?.reflection ?? {
@@ -43,112 +47,114 @@ export function WeekDetail({ week }: Props) {
     struggles: "",
   };
 
-  const groups = groupWeekTasksBySphere(
-    cycleTasks,
-    spheres,
-    week,
-    hiddenSphereIds,
-    weekFilterSphereId
+  const groups = useMemo(
+    () => groupWeekTasksByVisibleSpheres(cycleTasks, spheres, week, hiddenSphereIds),
+    [cycleTasks, spheres, week, hiddenSphereIds]
   );
-  const block = groups[0];
-  const tasks = block?.tasks ?? [];
-  const sphere = block?.sphere;
-  const allDone = tasks.length > 0 && tasks.every((t) => t.done);
 
   const saveReflection = (patch: Partial<WeekReflection>) => {
     setWeekReflection(week, { ...reflection, ...patch });
   };
 
+  const completeTask = (task: CycleTask) => {
+    if (task.done) return;
+    const preview = previewTaskCompletionRewards(profile.level, null, 100);
+    toggleCycleTask(task.id);
+    setRewardFlash({
+      title: task.title,
+      xp: preview.xp,
+      coins: preview.coins,
+    });
+  };
+
   return (
     <div className="space-y-4 px-4">
-      <Card>
-        <CardContent className="space-y-6 pt-6">
-          {!sphere && (
-            <p className="text-sm text-muted-foreground">
-              Добавьте цель на 12 недель или выберите вкладку выше.
-            </p>
-          )}
-          {sphere && (
-            <div className="space-y-3">
-              <div className="flex justify-end">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setTaskDialog({ mode: "add", sphereId: sphere.id })}
-                >
-                  + Задача
-                </Button>
-              </div>
-              {tasks.length === 0 && (
+      <TaskRewardFlash payload={rewardFlash} onDismiss={() => setRewardFlash(null)} />
+
+      {spheres.length === 0 && (
+        <p className="text-sm text-muted-foreground">
+          Добавь цель в «Герой → Цели», затем создавай задачи здесь.
+        </p>
+      )}
+
+      {groups.map(({ sphere, tasks }) => {
+        const sorted = sortCycleTasksByPlanDay(tasks);
+        return (
+          <Card key={sphere.id}>
+            <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
+              <CardTitle className="flex min-w-0 items-center gap-2 text-base">
+                <SphereGlyph icon={sphere.icon} color={sphere.color} size="sm" />
+                <span className="truncate">{sphere.name}</span>
+              </CardTitle>
+              <Button
+                size="sm"
+                variant="outline"
+                className="shrink-0"
+                onClick={() => setTaskDialog({ mode: "add", sphereId: sphere.id })}
+              >
+                + Задача
+              </Button>
+            </CardHeader>
+            <CardContent className="space-y-2 pt-0">
+              {sorted.length === 0 && (
                 <p className="text-xs text-muted-foreground">Нет задач на эту неделю</p>
               )}
-              <div className="space-y-1">
-                {tasks.map((task) => (
-                  <div
-                    key={task.id}
-                    className="flex items-start gap-3 rounded-md border border-white/5 bg-background/30 p-2"
-                  >
-                    <Checkbox
-                      id={task.id}
-                      checked={task.done}
-                      onCheckedChange={() => toggleCycleTask(task.id)}
+              {sorted.map((task) => (
+                <div key={task.id} className="flex items-start gap-1">
+                  <div className="min-w-0 flex-1">
+                    <TodayQuestRow
+                      task={task}
+                      sphere={sphere}
+                      compact
+                      planDayLabel={planDayLabel(task.planDay)}
+                      onComplete={() => completeTask(task)}
+                      onUndo={() => toggleCycleTask(task.id)}
                     />
-                    <div className="flex-1">
-                      <Label
-                        htmlFor={task.id}
-                        className="cursor-pointer text-sm font-normal leading-snug"
-                      >
-                        {task.title}
-                      </Label>
-                    </div>
-                    <div className="flex shrink-0 gap-0.5">
-                      <Button
-                        type="button"
-                        size="icon"
-                        variant="ghost"
-                        className="h-8 w-8 text-muted-foreground"
-                        aria-label="Редактировать"
-                        onClick={() => setTaskDialog({ mode: "edit", task })}
-                      >
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="ghost"
-                        className="text-muted-foreground"
-                        onClick={() => deleteCycleTask(task.id)}
-                      >
-                        ×
-                      </Button>
-                    </div>
                   </div>
-                ))}
-              </div>
-            </div>
-          )}
-          <WeekTaskFormDialog
-            sphereId={
-              taskDialog?.mode === "add"
-                ? taskDialog.sphereId
-                : taskDialog?.mode === "edit"
-                  ? taskDialog.task.sphereId
-                  : weekFilterSphereId
-            }
-            week={week}
-            open={taskDialog !== null}
-            onOpenChange={(o) => {
-              if (!o) setTaskDialog(null);
-            }}
-            editTask={taskDialog?.mode === "edit" ? taskDialog.task : null}
-          />
-          {allDone && !weekData?.bonusAwarded && (
-            <Button className="w-full" onClick={() => closeWeek(week)}>
-              Закрыть неделю (+50 XP)
-            </Button>
-          )}
-        </CardContent>
-      </Card>
+                  <div className="flex shrink-0 flex-col gap-0.5 pt-2">
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7 text-muted-foreground"
+                      aria-label="Редактировать"
+                      onClick={() => setTaskDialog({ mode: "edit", task })}
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7 text-muted-foreground"
+                      aria-label="Удалить"
+                      onClick={() => deleteCycleTask(task.id)}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        );
+      })}
+
+      <WeekTaskFormDialog
+        sphereId={
+          taskDialog?.mode === "add"
+            ? taskDialog.sphereId
+            : taskDialog?.mode === "edit"
+              ? taskDialog.task.sphereId
+              : spheres[0]?.id ?? ""
+        }
+        week={week}
+        open={taskDialog !== null}
+        onOpenChange={(o) => {
+          if (!o) setTaskDialog(null);
+        }}
+        editTask={taskDialog?.mode === "edit" ? taskDialog.task : null}
+      />
 
       <Card>
         <CardHeader>

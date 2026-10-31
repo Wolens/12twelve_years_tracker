@@ -13,22 +13,26 @@ import {
 import { useAppStore } from "@/store/useAppStore";
 import { previewTaskCompletionRewards } from "@/lib/rpg/task-rewards";
 import { CoinDisc } from "@/components/hero/coin-badge";
+import { SphereGlyph } from "@/components/spheres/sphere-glyph";
 import { cn } from "@/lib/utils";
 
 type Props = {
   task: CycleTask;
   sphere: Sphere;
-  goalTitle?: string;
+  planDayLabel?: string | null;
+  /** В карточке цели на «12 недель» — без значка сферы у каждой задачи */
+  compact?: boolean;
   onComplete: () => void;
   onUndo: () => void;
-  onUnassign: () => void;
-  onDragStart: (e: React.DragEvent) => void;
+  onUnassign?: () => void;
+  onDragStart?: (e: React.DragEvent) => void;
 };
 
 export function TodayQuestRow({
   task,
   sphere,
-  goalTitle,
+  planDayLabel,
+  compact = false,
   onComplete,
   onUndo,
   onUnassign,
@@ -58,20 +62,38 @@ export function TodayQuestRow({
   return (
     <>
       <div
-        draggable
+        draggable={Boolean(onDragStart)}
         onDragStart={onDragStart}
         className={cn(
-          "today-quest-row group relative cursor-grab overflow-hidden rounded-md border bg-[#070d0c]/90 active:cursor-grabbing",
+          "today-quest-row group relative overflow-hidden rounded-md border bg-[#070d0c]/90",
+          onDragStart && "cursor-grab active:cursor-grabbing",
           task.done && "opacity-70"
         )}
         style={{
           borderColor: `${sphere.color}40`,
         }}
       >
-        <div className="relative py-2 pl-2.5 pr-10 pb-2 pt-2">
-          <div className="flex items-center gap-2.5">
+        <div
+          className={cn(
+            "relative flex gap-2 py-2 pl-2 pr-3",
+          )}
+          style={
+            compact
+              ? undefined
+              : { borderLeftWidth: 3, borderLeftColor: sphere.color }
+          }
+        >
+          {!compact && (
+            <SphereGlyph
+              icon={sphere.icon}
+              color={sphere.color}
+              size="sm"
+              className="shrink-0 self-center"
+            />
+          )}
+          <div className="flex min-w-0 flex-1 items-center gap-1.5">
             <div className="min-w-0 flex-1 space-y-1">
-              <div>
+              <div className="flex flex-wrap items-center gap-2">
                 <p
                   className={cn(
                     "text-[13px] font-semibold leading-tight text-foreground/95",
@@ -80,8 +102,10 @@ export function TodayQuestRow({
                 >
                   {task.title}
                 </p>
-                {goalTitle && (
-                  <p className="mt-0.5 text-[10px] text-muted-foreground">{goalTitle}</p>
+                {planDayLabel && (
+                  <span className="rounded border border-white/15 bg-black/30 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                    {planDayLabel}
+                  </span>
                 )}
               </div>
               <div className="flex items-center gap-2 text-[10px] font-medium text-muted-foreground">
@@ -99,25 +123,28 @@ export function TodayQuestRow({
               type="button"
               onClick={openConfirm}
               className={cn(
-                "today-quest-execute shrink-0 px-2.5 py-1.5 transition",
+                "today-quest-execute shrink-0 self-center transition",
                 task.done && "today-quest-execute-done"
               )}
             >
-              <span className="block text-center text-[10px] font-bold uppercase leading-tight tracking-[0.1em]">
+              <span className="text-[10px] font-bold uppercase leading-none tracking-[0.1em]">
                 {task.done ? "Снять" : "Выполнить"}
               </span>
             </button>
           </div>
 
-          <button
-            type="button"
-            onPointerDown={(e) => e.stopPropagation()}
-            onClick={onUnassign}
-            className="absolute bottom-1.5 right-1.5 flex h-5 w-5 items-center justify-center rounded-sm border border-white/15 bg-black/40 text-muted-foreground/70 hover:border-white/25 hover:bg-white/5 hover:text-muted-foreground"
-            aria-label="Вернуть в неделю"
-          >
-            <ArrowDown className="h-2.5 w-2.5" strokeWidth={2.5} />
-          </button>
+
+          {onUnassign && (
+            <button
+              type="button"
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={onUnassign}
+              className="absolute bottom-1.5 right-1.5 flex h-5 w-5 items-center justify-center rounded-sm border border-white/15 bg-black/40 text-muted-foreground/70 hover:border-white/25 hover:bg-white/5 hover:text-muted-foreground"
+              aria-label="Вернуть в неделю"
+            >
+              <ArrowDown className="h-2.5 w-2.5" strokeWidth={2.5} />
+            </button>
+          )}
         </div>
       </div>
 

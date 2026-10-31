@@ -9,6 +9,7 @@ import { preserveSphereIcon } from "./sphere-icons";
 import { normalizeCharacter, normalizeSeasonFlame, resolveLegacyCharacterIdentity } from "./rpg/normalize-game";
 import { resolveSphereFilterId } from "./sphere-filter-default";
 import { hasUserProgress } from "./app-state-health";
+import { migratePlanDayFromAssignments } from "./cycle-task-plan";
 
 type LegacyGoal = Goal & {
   week?: number;
@@ -168,12 +169,24 @@ export function migrateAppState(
     base.goalsFilterSphereId as string | null | undefined
   );
 
+  const dayAssignments = base.dayAssignments ?? {};
+  if ((base.version ?? 0) < 15) {
+    cycleTasks = migratePlanDayFromAssignments(cycleTasks, dayAssignments);
+  }
+
+  let habits = base.habits ?? [];
+  if ((base.version ?? 0) < 16) {
+    habits = habits.map(({ sphereId: _removed, ...rest }) => rest);
+  }
+
   return {
     ...base,
     version: DATA_VERSION,
     hiddenSphereIds: base.hiddenSphereIds ?? [],
     weekHiddenSphereIds: base.weekHiddenSphereIds ?? [],
-    dayAssignments: base.dayAssignments ?? {},
+    dayAssignments,
+    habits,
+    habitCompletions: base.habitCompletions ?? {},
     spheres,
     goals: goalsV11,
     cycleTasks,

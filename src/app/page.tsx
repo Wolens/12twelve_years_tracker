@@ -6,7 +6,6 @@ import { xpProgressInLevel, rankTitle } from "@/lib/gamification";
 import { WeekStrip } from "@/components/dashboard/week-strip";
 import { WeekDetail } from "@/components/dashboard/week-detail";
 import { WeekNotesArchive } from "@/components/dashboard/week-notes-archive";
-import { SphereWeekFilter } from "@/components/spheres/sphere-week-filter";
 import { Progress } from "@/components/ui/progress";
 import { CoinBadge } from "@/components/hero/coin-badge";
 import { weekTacticalPercent } from "@/lib/week-momentum";
@@ -67,10 +66,6 @@ export default function DashboardPage() {
         selectedWeek={selectedWeek}
         onSelect={pickWeek}
       />
-
-      <div className="flex justify-center px-4">
-        <SphereWeekFilter className="w-full" />
-      </div>
 
       <WeekDetail week={detailWeek} />
 

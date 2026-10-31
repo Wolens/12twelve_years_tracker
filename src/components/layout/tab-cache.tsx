@@ -1,51 +1,59 @@
 "use client";
 
-import { Suspense, useEffect, useLayoutEffect, useRef, useState, type ComponentType, type ReactNode } from "react";
+import { memo, Suspense, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
+import { TabLiveContext } from "@/store/tab-live";
 import { subscribeNavPending } from "./nav-pending";
-import DashboardPage from "@/app/page";
-import TodayPage from "@/app/today/page";
-import PathPage from "@/app/path/page";
-import StatsPage from "@/app/stats/page";
-import { HeroScreen } from "@/components/hero/hero-screen";
-
-const TABS = ["/", "/today", "/hero", "/path", "/stats"] as const;
-type TabKey = (typeof TABS)[number];
-
-const PAGES: Record<TabKey, ComponentType> = {
-  "/": DashboardPage,
-  "/today": TodayPage,
-  "/hero": HeroTab,
-  "/path": PathPage,
-  "/stats": StatsPage,
-};
-
-function HeroTab() {
-  return (
-    <Suspense fallback={<div className="min-h-[40dvh]" aria-hidden />}>
-      <HeroScreen />
-    </Suspense>
-  );
-}
-
-function tabKey(pathname: string | null): TabKey | null {
-  if (!pathname) return null;
-  const path = pathname !== "/" && pathname.endsWith("/") ? pathname.slice(0, -1) : pathname;
-  return (TABS as readonly string[]).includes(path) ? (path as TabKey) : null;
-}
+import {
+  getTabPage,
+  loadTab,
+  preloadAllTabs,
+  tabKeyFromPath,
+  type TabKey,
+} from "./tab-pages";
 
 function remember(list: TabKey[], key: TabKey | null) {
   if (!key || list.includes(key)) return list;
   return [...list, key];
 }
 
+const TabSlot = memo(function TabSlot({ tab, active }: { tab: TabKey; active: boolean }) {
+  const [, setTick] = useState(0);
+  const Page = getTabPage(tab);
+
+  useEffect(() => {
+    if (Page) return;
+    let cancel = false;
+    void loadTab(tab).then(() => {
+      if (!cancel) setTick((n) => n + 1);
+    });
+    return () => {
+      cancel = true;
+    };
+  }, [Page, tab]);
+
+  if (!Page) {
+    return active ? <div className="min-h-[40dvh]" aria-hidden /> : null;
+  }
+
+  return (
+    <TabLiveContext.Provider value={active}>
+      <div className={active ? undefined : "hidden"} inert={active ? undefined : true}>
+        <Suspense fallback={active ? <div className="min-h-[40dvh]" aria-hidden /> : null}>
+          <Page />
+        </Suspense>
+      </div>
+    </TabLiveContext.Provider>
+  );
+});
+
 /**
- * Main tabs stay mounted after the first visit. The next switch only
- * shows the tree that is already on the page and restores its scroll.
+ * Вкладки остаются смонтированными после первого открытия.
+ * Скрытые не перерисовываются, пока их снова не выберут.
  */
 export function TabCache({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const activeKey = tabKey(pathname);
+  const activeKey = tabKeyFromPath(pathname);
   const [pending, setPending] = useState<string | null>(null);
   const [visited, setVisited] = useState<TabKey[]>(() => (activeKey ? [activeKey] : []));
   const scrolls = useRef(new Map<string, number>());
@@ -54,7 +62,7 @@ export function TabCache({ children }: { children: ReactNode }) {
 
   useLayoutEffect(() => subscribeNavPending(setPending), []);
 
-  const pendingKey = tabKey(pending);
+  const pendingKey = tabKeyFromPath(pending);
   const shownKey =
     pendingKey && pendingKey !== activeKey && visited.includes(pendingKey) ? pendingKey : activeKey;
   const mounted = remember(remember(visited, activeKey), shownKey);
@@ -65,6 +73,11 @@ export function TabCache({ children }: { children: ReactNode }) {
       return next === prev ? prev : next;
     });
   }, [activeKey, shownKey]);
+
+  useEffect(() => {
+    const id = window.setTimeout(preloadAllTabs, 200);
+    return () => window.clearTimeout(id);
+  }, []);
 
   useLayoutEffect(() => {
     const prev = history.scrollRestoration;
@@ -78,7 +91,7 @@ export function TabCache({ children }: { children: ReactNode }) {
     const onPointerDown = (event: PointerEvent) => {
       const link = (event.target as Element | null)?.closest?.("a[href]");
       if (!link) return;
-      const key = tabKey(pathRef.current);
+      const key = tabKeyFromPath(pathRef.current);
       if (key && key !== "/path") scrolls.current.set(key, window.scrollY);
     };
     document.addEventListener("pointerdown", onPointerDown, true);
@@ -103,27 +116,16 @@ export function TabCache({ children }: { children: ReactNode }) {
 
   return (
     <div className="relative z-0">
-      {mounted.map((key) => {
-        const Page = PAGES[key];
-        const visible = key === shownKey;
-        return (
-          <div key={key} className={visible ? undefined : "hidden"} inert={visible ? undefined : true}>
-            <Page />
-          </div>
-        );
-      })}
+      {mounted.map((key) => (
+        <TabSlot key={key} tab={key} active={key === shownKey} />
+      ))}
       {shownKey == null && children}
     </div>
   );
 }
 
 function applyScroll(key: string | null, scrolls: Map<string, number>) {
-  if (!key) return;
-  if (key === "/path") return;
+  if (!key || key === "/path") return;
   const saved = scrolls.get(key);
-  if (saved != null) {
-    window.scrollTo(0, saved);
-    return;
-  }
-  window.scrollTo(0, 0);
+  window.scrollTo(0, saved ?? 0);
 }

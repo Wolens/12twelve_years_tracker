@@ -26,6 +26,7 @@ import { StatsWeekGrid } from "@/components/stats/stats-week-grid";
 import { StatsSphereCard } from "@/components/stats/stats-sphere-card";
 import { StatsXpSources } from "@/components/stats/stats-xp-sources";
 import { StatsLegacyGoalsSection } from "@/components/stats/stats-legacy-goals";
+import { StatsHabitsGrid } from "@/components/stats/stats-habits-grid";
 import { SphereGlyph } from "@/components/spheres/sphere-glyph";
 import {
   Select,
@@ -44,6 +45,7 @@ const StatsXpChart = dynamic(
 
 const XP_CHART_DAYS = 14;
 const XP_SOURCE_DAYS = 28;
+const HABIT_GRID_DAYS = 14;
 
 export default function StatsPage() {
   const cycleTasks = useAppStore((s) => s.cycleTasks);
@@ -191,7 +193,7 @@ export default function StatsPage() {
           <h2 className="font-display text-lg font-semibold">По целям</h2>
           <div className="flex w-full flex-col gap-1 sm:w-auto sm:items-end">
             <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-              Задачи
+              Период
             </span>
             <Select
               value={taskWeekScope}
@@ -203,7 +205,7 @@ export default function StatsPage() {
             >
               <SelectTrigger
                 className="h-9 w-full min-w-[10.5rem] max-w-[12rem] shrink-0 gap-1 overflow-hidden py-1.5 pl-2.5 pr-2 text-xs font-medium leading-none sm:w-[10.5rem] [&>span:first-of-type]:min-w-0 [&>span:first-of-type]:truncate [&>span:first-of-type]:text-left"
-                aria-label="Период задач для статистики"
+                aria-label="Период для задач и привычек"
               >
                 <SelectValue />
               </SelectTrigger>
@@ -345,6 +347,38 @@ export default function StatsPage() {
           </p>
           <StatsXpSources rows={xpSources} total={xpSourceTotal} />
         </div>
+      </div>
+
+      <div className="game-surface space-y-3 p-4">
+        <h2 className="font-display text-lg font-semibold">Привычки</h2>
+        <p className="text-xs text-muted-foreground">
+          {taskWeekScope === "by_week" ? (
+            <>
+              Календарь недели {statsWeek}
+              {filterSphere !== "all"
+                ? ` · «${spheres.find((s) => s.id === filterSphere)?.name ?? ""}»`
+                : ""}
+            </>
+          ) : (
+            <>
+              Выполнение за последние {HABIT_GRID_DAYS} дней · весь цикл
+              {filterSphere !== "all"
+                ? ` · «${spheres.find((s) => s.id === filterSphere)?.name ?? ""}»`
+                : ""}
+            </>
+          )}
+        </p>
+        {taskWeekScope === "by_week" && (
+          <p className="text-[11px] text-muted-foreground">
+            Тот же период, что у задач выше. Пунктир — дни, которые ещё не наступили.
+          </p>
+        )}
+        <StatsHabitsGrid
+          taskWeekScope={taskWeekScope}
+          statsWeek={statsWeek}
+          cycleStartDate={cycleStartDate}
+          filterSphere={filterSphere}
+        />
       </div>
 
       <StatsLegacyGoalsSection />

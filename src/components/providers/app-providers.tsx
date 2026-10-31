@@ -6,7 +6,7 @@ import { useAuthStore } from "@/store/useAuthStore";
 import { LevelUpHandler } from "@/components/gamification/level-up-handler";
 import { SoundProvider } from "@/components/audio/sound-provider";
 import { Toaster } from "@/components/ui/toaster";
-import { achievementsNeedSync, syncProfileAchievements } from "@/lib/achievements";
+import { syncProfileAchievements } from "@/lib/achievements";
 import {
   hydrateAppStateFromCloud,
   pullCloudStateIntoApp,
@@ -18,6 +18,36 @@ import {
 } from "@/lib/cloud-hydration";
 import { repairAppState, stateNeedsRepair } from "@/lib/app-state-health";
 import { toast } from "@/components/ui/use-toast";
+import type { AppState } from "@/types";
+
+/** Дешёвый отпечаток прогресса. Ачивки не входят, чтобы sync не зацикливался. */
+function achievementProgressSnapshot(state: AppState): string {
+  let done = 0;
+  for (const task of state.cycleTasks) if (task.done) done++;
+  let bonus = 0;
+  for (const week of state.weeks) if (week.bonusAwarded) bonus++;
+  let marks = 0;
+  const completions = state.habitCompletions ?? {};
+  for (const date in completions) marks += completions[date]?.length ?? 0;
+  const activeHabits = (state.habits ?? []).reduce((n, habit) => n + (habit.archived ? 0 : 1), 0);
+  const profile = state.profile;
+  const character = state.character;
+  return [
+    done,
+    state.cycleTasks.length,
+    bonus,
+    activeHabits,
+    marks,
+    profile.streak,
+    profile.level,
+    profile.xp,
+    profile.xpLedger?.length ?? 0,
+    character.inventory.length,
+    character.claimedFloorChests?.length ?? 0,
+    character.claimedLevelRewards?.length ?? 0,
+    character.race,
+  ].join(":");
+}
 
 export function AppProviders({ children }: { children: React.ReactNode }) {
   const theme = useAppStore((s) => s.theme);
@@ -39,17 +69,35 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!authInitialized) return;
 
+    let progressSnap = achievementProgressSnapshot(useAppStore.getState());
+
     const syncAchievements = () => {
       const state = useAppStore.getState();
-      if (!achievementsNeedSync(state)) return;
-      useAppStore.setState({
-        profile: syncProfileAchievements(state),
-      });
+      const nextProfile = syncProfileAchievements(state);
+      if (nextProfile === state.profile) return;
+      useAppStore.setState({ profile: nextProfile });
+    };
+
+    let timer: number | undefined;
+    const onStoreChange = () => {
+      if (timer !== undefined) return;
+      timer = window.setTimeout(() => {
+        timer = undefined;
+        const state = useAppStore.getState();
+        const snap = achievementProgressSnapshot(state);
+        if (snap === progressSnap) return;
+        progressSnap = snap;
+        syncAchievements();
+      }, 0);
     };
 
     syncAchievements();
-    const unsubAchievements = useAppStore.subscribe(syncAchievements);
-    return () => unsubAchievements();
+    progressSnap = achievementProgressSnapshot(useAppStore.getState());
+    const unsubAchievements = useAppStore.subscribe(onStoreChange);
+    return () => {
+      unsubAchievements();
+      if (timer !== undefined) window.clearTimeout(timer);
+    };
   }, [authInitialized]);
 
   useEffect(() => {
@@ -65,6 +113,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
       }
       useAppStore.getState().processSeasonFlameOnBoot();
       useAppStore.getState().syncLevelRewards();
+      useAppStore.getState().syncCycleFromCalendar();
       return;
     }
 
@@ -84,6 +133,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
         }
         const decay = useAppStore.getState().processSeasonFlameOnBoot();
         useAppStore.getState().syncLevelRewards();
+        useAppStore.getState().syncCycleFromCalendar();
         if (decay.missedDays > 0 && !cancelled) {
           toast({
             title: "Здоровье снизилось",

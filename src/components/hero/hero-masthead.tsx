@@ -1,7 +1,7 @@
 "use client";
 
 import { memo, useEffect, useState } from "react";
-import { Swords, Users } from "lucide-react";
+import { Swords, ShoppingBag, Users } from "lucide-react";
 import { useAppStore } from "@/store/useAppStore";
 import { rankTitle, xpProgressInLevel } from "@/lib/gamification";
 import { LEVEL_MILESTONES } from "@/lib/rpg/level-roadmap";
@@ -118,6 +118,19 @@ export const HeroMasthead = memo(function HeroMasthead({ onOpenShop }: { onOpenS
             aria-label="Битвы — скоро будет доступно"
           >
             <Swords className="h-5 w-5" strokeWidth={2.25} aria-hidden />
+          </button>
+          <button
+            type="button"
+            onClick={onOpenShop}
+            className={cn(
+              "flex h-11 w-11 items-center justify-center rounded-xl border transition-colors",
+              "border-amber-500/35 bg-card/90 text-amber-700 shadow-sm",
+              "hover:border-amber-500/50 hover:bg-amber-500/10",
+              "dark:border-amber-400/30 dark:bg-background/80 dark:text-amber-200"
+            )}
+            aria-label="Магазин"
+          >
+            <ShoppingBag className="h-5 w-5" strokeWidth={2.25} aria-hidden />
           </button>
         </div>
       </header>

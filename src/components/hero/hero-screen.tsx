@@ -2,33 +2,37 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { ShoppingBag, Target, User } from "lucide-react";
+import { Repeat, Target, User } from "lucide-react";
 import { HeroMasthead } from "@/components/hero/hero-masthead";
-import { HeroPanel, ShopPanel } from "@/components/hero/hero-tab-panels";
+import { HeroPanel } from "@/components/hero/hero-tab-panels";
 import { HeroGoalsPanel } from "@/components/hero/hero-goals-panel";
+import { HeroHabitsPanel } from "@/components/hero/hero-habits-panel";
+import { HeroShopDialog } from "@/components/hero/hero-shop-dialog";
 import { cn } from "@/lib/utils";
 
-type Tab = "hero" | "goals" | "shop";
+type Tab = "hero" | "goals" | "habits";
 
 const TABS: { id: Tab; label: string; icon: typeof User }[] = [
   { id: "hero", label: "Герой", icon: User },
   { id: "goals", label: "Цели", icon: Target },
-  { id: "shop", label: "Магазин", icon: ShoppingBag },
+  { id: "habits", label: "Привычки", icon: Repeat },
 ];
 
 function tabFromSearch(search: string): Tab | null {
   const t = new URLSearchParams(search).get("tab");
-  if (t === "shop" || t === "goals" || t === "hero") return t;
+  if (t === "habits" || t === "shop") return "habits";
+  if (t === "goals" || t === "hero") return t;
   return null;
 }
 
 export function HeroScreen() {
   const searchParams = useSearchParams();
   const [tab, setTab] = useState<Tab>("hero");
+  const [shopOpen, setShopOpen] = useState(false);
   const [seen, setSeen] = useState<Record<Tab, boolean>>({
     hero: true,
     goals: false,
-    shop: false,
+    habits: false,
   });
 
   const select = useCallback((next: Tab) => {
@@ -36,7 +40,7 @@ export function HeroScreen() {
     setSeen((prev) => (prev[next] ? prev : { ...prev, [next]: true }));
   }, []);
 
-  const openShop = useCallback(() => select("shop"), [select]);
+  const openShop = useCallback(() => setShopOpen(true), []);
 
   useEffect(() => {
     const fromUrl = tabFromSearch(searchParams.toString());
@@ -46,6 +50,7 @@ export function HeroScreen() {
   return (
     <div className="space-y-4 px-4 pt-4 pb-8">
       <HeroMasthead onOpenShop={openShop} />
+      <HeroShopDialog open={shopOpen} onOpenChange={setShopOpen} />
 
       <div
         className="grid grid-cols-3 gap-1 rounded-2xl border border-border bg-secondary/70 p-1 shadow-inner dark:border-white/[0.06] dark:bg-black/25"
@@ -78,9 +83,14 @@ export function HeroScreen() {
           <HeroGoalsPanel />
         </div>
       )}
-      {seen.shop && (
-        <div role="tabpanel" id="panel-shop" aria-labelledby="tab-shop" hidden={tab !== "shop"}>
-          <ShopPanel />
+      {seen.habits && (
+        <div
+          role="tabpanel"
+          id="panel-habits"
+          aria-labelledby="tab-habits"
+          hidden={tab !== "habits"}
+        >
+          <HeroHabitsPanel />
         </div>
       )}
     </div>

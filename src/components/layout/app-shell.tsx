@@ -29,6 +29,14 @@ const CharacterSetupDialog = dynamic(
   { ssr: false }
 );
 
+const WeekRolloverDialog = dynamic(
+  () =>
+    import("@/components/dashboard/week-rollover-dialog").then(
+      (m) => m.WeekRolloverDialog
+    ),
+  { ssr: false }
+);
+
 const HYDRATE_FALLBACK_MS = 800;
 const BOOT_FORCE_SHOW_MS = 2000;
 
@@ -67,6 +75,8 @@ function BootSplash({ stalled }: { stalled?: boolean }) {
         <p className="max-w-xs px-4 text-center text-xs text-zinc-500">
           Дольше обычного? После правок в dev нажми{" "}
           <strong className="text-zinc-400">Ctrl+Shift+R</strong> или перезапусти{" "}
+          <code className="text-violet-300/90">npm run dev</code>
+          {" / "}
           <code className="text-violet-300/90">npm run dev:clean</code>
         </p>
       )}
@@ -88,6 +98,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [navPending, setNavPendingHref] = useState<string | null>(null);
   const [forceBoot, setForceBoot] = useState(false);
   const [splashStalled, setSplashStalled] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useLayoutEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     const t = window.setTimeout(() => setForceBoot(true), BOOT_FORCE_SHOW_MS);
@@ -121,7 +136,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }, [ready, authInitialized, onboardingComplete, pathname, router]);
 
   useLayoutEffect(() => {
-    if (!ready || !authInitialized) return;
+    if (!ready) return;
 
     const state = useAppStore.getState();
     if (!state.onboardingComplete || !state.tourComplete) return;
@@ -134,9 +149,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (pathname !== "/path") {
       router.replace("/path");
     }
-  }, [ready, authInitialized, onboardingComplete, tourComplete, pathname, router]);
+  }, [ready, onboardingComplete, tourComplete, pathname, router]);
 
-  const booting = !forceBoot && (!ready || !authInitialized);
+  const booting =
+    !forceBoot && (!mounted || !ready || (!onboardingComplete && !authInitialized));
 
   if (booting) {
     return <BootSplash stalled={splashStalled} />;
@@ -182,6 +198,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {onboardingComplete && identitySetupDone && !tourComplete && (
         <OnboardingTour />
       )}
+      <WeekRolloverDialog />
     </div>
   );
 }

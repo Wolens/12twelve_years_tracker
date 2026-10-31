@@ -19,6 +19,7 @@ export const XP_STREAK_CAP = 50;
 export const XP_DAILY_RITUAL_MIN = 12;
 export const XP_DAILY_RITUAL_MAX = 28;
 export const XP_DAILY_QUEST_BONUS = 40;
+export const XP_HABIT = 5;
 export const DAILY_QUEST_TASKS = 3;
 
 export const MAX_LEVEL = 100;
@@ -124,5 +125,10 @@ export const ACHIEVEMENTS_META: Record<
     title: "Легенда",
     description: "Максимальный уровень",
     icon: "mountain",
+  },
+  habit_streak_7: {
+    title: "Ритм 7",
+    description: "7 подряд выполненных дней у одной привычки",
+    icon: "calendar-check",
   },
 };

@@ -19,15 +19,18 @@ import {
 } from "@/components/ui/select";
 import { useAppStore } from "@/store/useAppStore";
 import type { CycleTask } from "@/types";
+import { PLAN_DAY_SHORT } from "@/lib/cycle-task-plan";
+import { cn } from "@/lib/utils";
 
 type Props = {
   sphereId: string;
-  /** Если задана — неделя фиксирована (экран «12 недель»). Иначе можно выбрать 1–12. */
   week?: number;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   editTask?: CycleTask | null;
 };
+
+const NONE_DAY = "none";
 
 export function WeekTaskFormDialog({
   sphereId,
@@ -43,6 +46,7 @@ export function WeekTaskFormDialog({
   const effectiveSphereId = editTask?.sphereId ?? sphereId;
   const [taskWeek, setTaskWeek] = useState(fixedWeek ?? activeWeek);
   const [title, setTitle] = useState("");
+  const [planDayRaw, setPlanDayRaw] = useState<string>(NONE_DAY);
 
   const isEdit = Boolean(editTask);
   const weekLocked = fixedWeek != null && !isEdit;
@@ -52,21 +56,34 @@ export function WeekTaskFormDialog({
     if (editTask) {
       setTaskWeek(editTask.week);
       setTitle(editTask.title);
+      setPlanDayRaw(
+        editTask.planDay != null && editTask.planDay >= 1 && editTask.planDay <= 7
+          ? String(editTask.planDay)
+          : NONE_DAY
+      );
       return;
     }
     setTaskWeek(fixedWeek ?? activeWeek);
     setTitle("");
+    setPlanDayRaw(NONE_DAY);
   }, [open, fixedWeek, activeWeek, editTask]);
 
   const submit = () => {
     if (!title.trim() || taskWeek < 1 || taskWeek > 12) return;
+    const planDay =
+      planDayRaw === NONE_DAY ? undefined : Number(planDayRaw);
     if (editTask) {
-      updateCycleTask(editTask.id, { title: title.trim(), week: taskWeek });
+      updateCycleTask(editTask.id, {
+        title: title.trim(),
+        week: taskWeek,
+        planDay,
+      });
     } else {
       addCycleTask({
         sphereId: effectiveSphereId,
         week: taskWeek,
         title: title.trim(),
+        planDay,
       });
     }
     onOpenChange(false);
@@ -108,6 +125,41 @@ export function WeekTaskFormDialog({
               </Select>
             </div>
           )}
+          <div>
+            <Label>День недели</Label>
+            <div className="mt-2 flex flex-wrap gap-1">
+              <button
+                type="button"
+                className={cn(
+                  "rounded-lg border px-2.5 py-1.5 text-xs",
+                  planDayRaw === NONE_DAY
+                    ? "border-primary bg-primary/10"
+                    : "border-white/10 text-muted-foreground"
+                )}
+                onClick={() => setPlanDayRaw(NONE_DAY)}
+              >
+                Не выбран
+              </button>
+              {PLAN_DAY_SHORT.slice(1).map((label, i) => {
+                const d = i + 1;
+                return (
+                  <button
+                    key={d}
+                    type="button"
+                    className={cn(
+                      "h-9 w-9 rounded-lg border text-xs font-medium",
+                      planDayRaw === String(d)
+                        ? "border-primary bg-primary/15 text-primary"
+                        : "border-white/10 text-muted-foreground"
+                    )}
+                    onClick={() => setPlanDayRaw(String(d))}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
           <div>
             <Label>Задача</Label>
             <Input
