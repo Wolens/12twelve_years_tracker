@@ -3,6 +3,7 @@
 create table if not exists public.user_profiles (
   id uuid primary key references auth.users (id) on delete cascade,
   app_state jsonb,
+  app_state_backup jsonb,
   updated_at timestamptz not null default now()
 );
 

@@ -16,6 +16,7 @@ import {
   markCloudHydrationDone,
   resetCloudHydrationGate,
 } from "@/lib/cloud-hydration";
+import { markGuestSessionDirty } from "@/lib/cloud-guest-session";
 import { repairAppState, stateNeedsRepair } from "@/lib/app-state-health";
 import { toast } from "@/components/ui/use-toast";
 import type { AppState } from "@/types";
@@ -65,6 +66,14 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     return useAuthStore.getState().init();
   }, []);
+
+  useEffect(() => {
+    if (!authInitialized || userId) return;
+    const unsubGuest = useAppStore.subscribe(() => {
+      markGuestSessionDirty();
+    });
+    return () => unsubGuest();
+  }, [authInitialized, userId]);
 
   useEffect(() => {
     if (!authInitialized) return;

@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useAppStore } from "@/store/useAppStore";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
 import {
-  fetchCloudAppState,
-  LOGIN_PREFER_REMOTE_KEY,
-  shouldConfirmLoginWipe,
+  localHasGuestScratch,
+  fetchCloudAppStateBackup,
+  restoreCloudProfileFromBackup,
 } from "@/lib/cloud-sync";
 import { repairAppState } from "@/lib/app-state-health";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -29,33 +29,26 @@ function GuestAuthForm() {
   const [loading, setLoading] = useState(false);
 
   const submitLogin = async () => {
+    const local = repairAppState(useAppStore.getState().exportState());
+    if (localHasGuestScratch(local)) {
+      const ok = window.confirm(
+        "Вы входите в аккаунт. Все данные, которые вы нажимали без входа (сферы, сундуки, задачи на этом устройстве), будут удалены и заменены сохранённым прогрессом из вашего профиля. Продолжить?"
+      );
+      if (!ok) {
+        toast({
+          title: "Вход отменён",
+          description: "Локальные данные сохранены.",
+        });
+        return;
+      }
+    }
+
     setLoading(true);
     const res = await signIn(email, password);
     if (!res.ok) {
       setLoading(false);
       toast({ title: "Ошибка", description: res.error });
       return;
-    }
-
-    const userId = useAuthStore.getState().user?.id;
-    if (userId) {
-      const remote = await fetchCloudAppState(userId);
-      const local = repairAppState(useAppStore.getState().exportState());
-      if (shouldConfirmLoginWipe(local, remote)) {
-        const ok = window.confirm(
-          "На этом устройстве есть данные, набранные до входа. Они будут заменены данными из вашего аккаунта. Продолжить?"
-        );
-        if (!ok) {
-          await useAuthStore.getState().signOut();
-          setLoading(false);
-          toast({
-            title: "Вход отменён",
-            description: "Локальные данные сохранены. Войдите снова, когда будете готовы.",
-          });
-          return;
-        }
-        sessionStorage.setItem(LOGIN_PREFER_REMOTE_KEY, userId);
-      }
     }
 
     setLoading(false);
@@ -171,8 +164,39 @@ function LoggedInAccountPanel() {
   const [showPassword, setShowPassword] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [hasBackup, setHasBackup] = useState<boolean | null>(null);
+  const [restoring, setRestoring] = useState(false);
 
   const email = user?.email ?? "";
+  const userId = user?.id;
+
+  useEffect(() => {
+    if (!userId) return;
+    void fetchCloudAppStateBackup(userId).then((b) => setHasBackup(Boolean(b)));
+  }, [userId]);
+
+  const tryRestoreBackup = async () => {
+    if (!userId) return;
+    if (
+      !window.confirm(
+        "Восстановить предыдущую сохранённую копию профиля из облака? Текущий прогресс будет заменён."
+      )
+    ) {
+      return;
+    }
+    setRestoring(true);
+    const ok = await restoreCloudProfileFromBackup(userId);
+    setRestoring(false);
+    if (ok) {
+      toast({ title: "Профиль восстановлен из резервной копии" });
+    } else {
+      toast({
+        title: "Не удалось восстановить",
+        description:
+          "Резервной копии нет или колонка app_state_backup ещё не добавлена в Supabase.",
+      });
+    }
+  };
 
   const submitPassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -202,6 +226,18 @@ function LoggedInAccountPanel() {
         <LogOut className="h-4 w-4" />
         Выйти
       </Button>
+
+      {hasBackup && (
+        <Button
+          type="button"
+          variant="secondary"
+          className="w-full"
+          disabled={restoring}
+          onClick={() => void tryRestoreBackup()}
+        >
+          {restoring ? "Восстановление…" : "Восстановить прошлую копию профиля"}
+        </Button>
+      )}
 
       <Button
         type="button"
