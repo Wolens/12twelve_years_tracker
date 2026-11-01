@@ -11,15 +11,46 @@ function mergeCharacterIdentity(
 ): AppState["character"] {
   const localChar = normalizeCharacter(local.character);
   const remoteChar = normalizeCharacter(remote.character);
+  let base: AppState["character"];
   if (localChar.identitySetupDone && !remoteChar.identitySetupDone) {
-    return {
+    base = {
       ...remoteChar,
       gender: localChar.gender ?? remoteChar.gender,
       birthDate: localChar.birthDate ?? remoteChar.birthDate,
       identitySetupDone: true,
     };
+  } else {
+    base = remoteChar.identitySetupDone ? remoteChar : localChar;
   }
-  return remoteChar.identitySetupDone ? remoteChar : localChar;
+
+  const claimedFloorChests = Array.from(
+    new Set([...(localChar.claimedFloorChests ?? []), ...(remoteChar.claimedFloorChests ?? [])])
+  ).sort((a, b) => a - b);
+  const inventory = Array.from(
+    new Set([...(localChar.inventory ?? []), ...(remoteChar.inventory ?? [])])
+  );
+  const claimedLevelRewards = Array.from(
+    new Set([
+      ...(localChar.claimedLevelRewards ?? []),
+      ...(remoteChar.claimedLevelRewards ?? []),
+    ])
+  );
+
+  return {
+    ...base,
+    claimedFloorChests,
+    inventory,
+    claimedLevelRewards,
+    coins: Math.max(localChar.coins ?? 0, remoteChar.coins ?? 0),
+  };
+}
+
+/** После входа: данные аккаунта, без гостевых нажатий на этом устройстве. */
+export function applyRemoteOverGuest(_local: AppState, remote: AppState): AppState {
+  return {
+    ...remote,
+    theme: _local.theme,
+  };
 }
 
 function mergeLedger(local: XpLedgerEntry[], remote: XpLedgerEntry[]): XpLedgerEntry[] {
@@ -115,13 +146,6 @@ export function mergeAppStateForSync(
   remote: AppState,
   opts?: { preferLocalUi?: boolean }
 ): AppState {
-  const spheres = mergeRecordsByUpdatedAt(local.spheres ?? [], remote.spheres ?? []);
-  const goals = mergeRecordsByUpdatedAt(local.goals ?? [], remote.goals ?? []);
-  const cycleTasks = mergeRecordsByUpdatedAt(
-    local.cycleTasks ?? [],
-    remote.cycleTasks ?? []
-  );
-
   const habits = mergeRecordsByUpdatedAt(local.habits ?? [], remote.habits ?? []);
 
   const localTouch = syncTs(local.cloudTouchAt);
@@ -129,6 +153,22 @@ export function mergeAppStateForSync(
   const preferLocalTouch = localTouch >= remoteTouch;
   const base = remoteTouch > localTouch ? remote : local;
   const other = base === local ? remote : local;
+
+  let spheres = mergeRecordsByUpdatedAt(local.spheres ?? [], remote.spheres ?? []);
+  let goals = mergeRecordsByUpdatedAt(local.goals ?? [], remote.goals ?? []);
+  let cycleTasks = mergeRecordsByUpdatedAt(
+    local.cycleTasks ?? [],
+    remote.cycleTasks ?? []
+  );
+
+  if (preferLocalTouch) {
+    const localSphereIds = new Set((local.spheres ?? []).map((s) => s.id));
+    const localTaskIds = new Set((local.cycleTasks ?? []).map((t) => t.id));
+    const localGoalIds = new Set((local.goals ?? []).map((g) => g.id));
+    spheres = spheres.filter((s) => localSphereIds.has(s.id));
+    goals = goals.filter((g) => localGoalIds.has(g.id));
+    cycleTasks = cycleTasks.filter((t) => localTaskIds.has(t.id));
+  }
 
   const merged: AppState = {
     ...base,

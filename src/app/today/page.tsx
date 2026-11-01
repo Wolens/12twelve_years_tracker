@@ -5,11 +5,11 @@ import { useAppStore } from "@/store/useAppStore";
 import { todayISO } from "@/lib/gamification";
 import { workingCyclePosition } from "@/lib/cycle-calendar-sync";
 import { cycleTasksForWeekDay } from "@/lib/cycle-task-plan";
+import { buildTaskRewardFlash } from "@/lib/cycle-task-complete";
 import { DailySeasonCard } from "@/components/engagement/daily-season-card";
 import { TodayHabitsSection } from "@/components/today/today-habits-section";
 import { TodayQuestRow } from "@/components/today/today-quest-row";
 import { TaskRewardFlash, type TaskRewardFlashPayload } from "@/components/today/task-reward-flash";
-import { previewTaskCompletionRewards } from "@/lib/rpg/task-rewards";
 import type { CycleTask, Sphere } from "@/types";
 
 export default function TodayPage() {
@@ -18,7 +18,6 @@ export default function TodayPage() {
   const activeWeek = useAppStore((s) => s.activeWeek);
   const activeDay = useAppStore((s) => s.activeDay);
   const dayAssignments = useAppStore((s) => s.dayAssignments);
-  const profile = useAppStore((s) => s.profile);
   const toggleCycleTask = useAppStore((s) => s.toggleCycleTask);
 
   const [rewardFlash, setRewardFlash] = useState<TaskRewardFlashPayload | null>(null);
@@ -81,18 +80,12 @@ export default function TodayPage() {
               task={task}
               sphere={sphere}
               onComplete={() => {
-                if (task.done) return;
-                const preview = previewTaskCompletionRewards(profile.level, null, 100);
-                toggleCycleTask(task.id);
-                setRewardFlash({
-                  title: task.title,
-                  xp: preview.xp,
-                  coins: preview.coins,
-                });
+                const flash = buildTaskRewardFlash(task.id, task.title);
+                if (flash) setRewardFlash(flash);
               }}
               onUndo={() => {
-                if (!task.done) return;
-                toggleCycleTask(task.id);
+                const live = useAppStore.getState().cycleTasks.find((t) => t.id === task.id);
+                if (live?.done) toggleCycleTask(task.id);
               }}
             />
           ))}

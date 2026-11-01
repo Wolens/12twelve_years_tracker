@@ -4,6 +4,7 @@ import { startTransition, useEffect, useState } from "react";
 import { useAppStore } from "@/store/useAppStore";
 import { xpProgressInLevel, rankTitle } from "@/lib/gamification";
 import { WeekStrip } from "@/components/dashboard/week-strip";
+import { SphereWeekFilter } from "@/components/spheres/sphere-week-filter";
 import { WeekDetail } from "@/components/dashboard/week-detail";
 import { WeekNotesArchive } from "@/components/dashboard/week-notes-archive";
 import { Progress } from "@/components/ui/progress";
@@ -66,6 +67,8 @@ export default function DashboardPage() {
         selectedWeek={selectedWeek}
         onSelect={pickWeek}
       />
+
+      <SphereWeekFilter className="px-4" />
 
       <WeekDetail week={detailWeek} />
 

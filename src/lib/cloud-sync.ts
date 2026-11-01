@@ -2,7 +2,7 @@ import type { AppState } from "@/types";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { useAppStore } from "@/store/useAppStore";
 import { hasUserProgress, repairAppState } from "@/lib/app-state-health";
-import { mergeAppStateForSync } from "@/lib/cloud-merge";
+import { applyRemoteOverGuest, mergeAppStateForSync } from "@/lib/cloud-merge";
 import { syncNow } from "@/lib/sync-timestamp";
 
 export function isAppStateEmpty(state: AppState | null | undefined): boolean {
@@ -12,6 +12,18 @@ export function isAppStateEmpty(state: AppState | null | undefined): boolean {
 
 export function localAppStateHasData(state: AppState): boolean {
   return !isAppStateEmpty(state);
+}
+
+export const LOGIN_PREFER_REMOTE_KEY = "cloud:login-prefer-remote";
+
+export function localHasGuestScratch(state: AppState): boolean {
+  if (localAppStateHasData(state)) return true;
+  return (state.spheres?.length ?? 0) > 0 || state.onboardingComplete;
+}
+
+export function shouldConfirmLoginWipe(local: AppState, remote: AppState | null): boolean {
+  if (!remote || isAppStateEmpty(remote)) return false;
+  return localHasGuestScratch(local);
 }
 
 export async function fetchCloudAppState(
@@ -79,6 +91,18 @@ export async function hydrateAppStateFromCloud(userId: string): Promise<void> {
   const hasRemote = remote && !isAppStateEmpty(remote);
   const hasLocal = localAppStateHasData(local);
 
+  const preferRemote =
+    typeof sessionStorage !== "undefined" &&
+    sessionStorage.getItem(LOGIN_PREFER_REMOTE_KEY) === userId;
+
+  if (preferRemote && hasRemote) {
+    sessionStorage.removeItem(LOGIN_PREFER_REMOTE_KEY);
+    const applied = repairAppState(applyRemoteOverGuest(local, remote));
+    useAppStore.getState().importState(applied);
+    await saveCloudAppState(userId, applied);
+    return;
+  }
+
   if (hasRemote && hasLocal) {
     const merged = mergeAndApply(local, remote);
     useAppStore.getState().importState(merged);
@@ -87,7 +111,7 @@ export async function hydrateAppStateFromCloud(userId: string): Promise<void> {
   }
 
   if (hasRemote) {
-    useAppStore.getState().importState(mergeAndApply(local, remote));
+    useAppStore.getState().importState(repairAppState(remote));
     return;
   }
 

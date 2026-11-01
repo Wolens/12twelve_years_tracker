@@ -8,11 +8,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider-simple";
 import { WeekControls } from "@/components/dashboard/week-controls";
-import { groupWeekTasksByVisibleSpheres } from "@/lib/sphere-filters";
+import { groupWeekTasksBySphere } from "@/lib/sphere-filters";
 import { WeekTaskFormDialog } from "@/components/goals/week-task-form-dialog";
 import { TodayQuestRow } from "@/components/today/today-quest-row";
 import { planDayLabel, sortCycleTasksByPlanDay } from "@/lib/cycle-task-plan";
-import { previewTaskCompletionRewards } from "@/lib/rpg/task-rewards";
+import { buildTaskRewardFlash } from "@/lib/cycle-task-complete";
 import type { CycleTask, WeekReflection } from "@/types";
 import { SphereGlyph } from "@/components/spheres/sphere-glyph";
 import { Pencil, Trash2 } from "lucide-react";
@@ -29,8 +29,8 @@ export function WeekDetail({ week }: Props) {
   const cycleTasks = useAppStore((s) => s.cycleTasks);
   const spheres = useAppStore((s) => s.spheres);
   const hiddenSphereIds = useAppStore((s) => s.weekHiddenSphereIds);
+  const weekFilterSphereId = useAppStore((s) => s.weekFilterSphereId);
   const weeks = useAppStore((s) => s.weeks);
-  const profile = useAppStore((s) => s.profile);
   const toggleCycleTask = useAppStore((s) => s.toggleCycleTask);
   const deleteCycleTask = useAppStore((s) => s.deleteCycleTask);
   const setWeekReflection = useAppStore((s) => s.setWeekReflection);
@@ -48,8 +48,15 @@ export function WeekDetail({ week }: Props) {
   };
 
   const groups = useMemo(
-    () => groupWeekTasksByVisibleSpheres(cycleTasks, spheres, week, hiddenSphereIds),
-    [cycleTasks, spheres, week, hiddenSphereIds]
+    () =>
+      groupWeekTasksBySphere(
+        cycleTasks,
+        spheres,
+        week,
+        hiddenSphereIds,
+        weekFilterSphereId
+      ),
+    [cycleTasks, spheres, week, hiddenSphereIds, weekFilterSphereId]
   );
 
   const saveReflection = (patch: Partial<WeekReflection>) => {
@@ -57,14 +64,8 @@ export function WeekDetail({ week }: Props) {
   };
 
   const completeTask = (task: CycleTask) => {
-    if (task.done) return;
-    const preview = previewTaskCompletionRewards(profile.level, null, 100);
-    toggleCycleTask(task.id);
-    setRewardFlash({
-      title: task.title,
-      xp: preview.xp,
-      coins: preview.coins,
-    });
+    const flash = buildTaskRewardFlash(task.id, task.title);
+    if (flash) setRewardFlash(flash);
   };
 
   return (
@@ -108,7 +109,10 @@ export function WeekDetail({ week }: Props) {
                       compact
                       planDayLabel={planDayLabel(task.planDay)}
                       onComplete={() => completeTask(task)}
-                      onUndo={() => toggleCycleTask(task.id)}
+                      onUndo={() => {
+                        const live = useAppStore.getState().cycleTasks.find((t) => t.id === task.id);
+                        if (live?.done) toggleCycleTask(task.id);
+                      }}
                     />
                   </div>
                   <div className="flex shrink-0 flex-col gap-0.5 pt-2">
@@ -146,7 +150,7 @@ export function WeekDetail({ week }: Props) {
             ? taskDialog.sphereId
             : taskDialog?.mode === "edit"
               ? taskDialog.task.sphereId
-              : spheres[0]?.id ?? ""
+              : weekFilterSphereId || spheres[0]?.id || ""
         }
         week={week}
         open={taskDialog !== null}

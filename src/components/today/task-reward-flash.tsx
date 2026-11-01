@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { CoinDisc } from "@/components/hero/coin-badge";
 
 export type TaskRewardFlashPayload = {
+  taskId: string;
   title: string;
   xp: number;
   coins: number;
@@ -17,11 +18,13 @@ export function TaskRewardFlash({
   payload: TaskRewardFlashPayload | null;
   onDismiss: () => void;
 }) {
+  const taskId = payload?.taskId;
+
   useEffect(() => {
-    if (!payload) return;
+    if (!taskId) return;
     const t = window.setTimeout(onDismiss, 2600);
     return () => window.clearTimeout(t);
-  }, [payload, onDismiss]);
+  }, [taskId, onDismiss]);
 
   if (!payload) return null;
 

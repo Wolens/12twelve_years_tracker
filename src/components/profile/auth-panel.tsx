@@ -2,7 +2,14 @@
 
 import { useState } from "react";
 import { useAuthStore } from "@/store/useAuthStore";
+import { useAppStore } from "@/store/useAppStore";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
+import {
+  fetchCloudAppState,
+  LOGIN_PREFER_REMOTE_KEY,
+  shouldConfirmLoginWipe,
+} from "@/lib/cloud-sync";
+import { repairAppState } from "@/lib/app-state-health";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,13 +31,36 @@ function GuestAuthForm() {
   const submitLogin = async () => {
     setLoading(true);
     const res = await signIn(email, password);
-    setLoading(false);
-    if (res.ok) {
-      toast({ title: "Вход выполнен" });
-      setPassword("");
-    } else {
+    if (!res.ok) {
+      setLoading(false);
       toast({ title: "Ошибка", description: res.error });
+      return;
     }
+
+    const userId = useAuthStore.getState().user?.id;
+    if (userId) {
+      const remote = await fetchCloudAppState(userId);
+      const local = repairAppState(useAppStore.getState().exportState());
+      if (shouldConfirmLoginWipe(local, remote)) {
+        const ok = window.confirm(
+          "На этом устройстве есть данные, набранные до входа. Они будут заменены данными из вашего аккаунта. Продолжить?"
+        );
+        if (!ok) {
+          await useAuthStore.getState().signOut();
+          setLoading(false);
+          toast({
+            title: "Вход отменён",
+            description: "Локальные данные сохранены. Войдите снова, когда будете готовы.",
+          });
+          return;
+        }
+        sessionStorage.setItem(LOGIN_PREFER_REMOTE_KEY, userId);
+      }
+    }
+
+    setLoading(false);
+    toast({ title: "Вход выполнен" });
+    setPassword("");
   };
 
   const submitRegister = async () => {

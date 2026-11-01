@@ -234,6 +234,7 @@ export function TowerBoard() {
   );
 
   const standDay = heroStandDay(todayDay, activeWeek, activeDay);
+  const chestReachDay = Math.max(todayDay ?? 0, standDay ?? 0);
 
   const tower = useMemo(
     () => buildTower({ start, today, currentDay: standDay, ledger, closed, assignments, tasks }),
@@ -425,6 +426,7 @@ export function TowerBoard() {
               key={day.day}
               day={day}
               todayDay={todayDay}
+              chestReachDay={chestReachDay}
               passageLocked={!built && day.state === "future"}
               pressed={picked === day.day}
               chestClaimed={claimedFloorChests.includes(day.day)}
@@ -547,7 +549,7 @@ export function TowerBoard() {
 
       <FloorChestDialog
         floorDay={chestFloor}
-        reachDay={todayDay ?? 0}
+        reachDay={chestReachDay}
         open={chestOpen}
         onOpenChange={(open) => {
           setChestOpen(open);
@@ -561,6 +563,7 @@ export function TowerBoard() {
 const FloorButton = memo(function FloorButton({
   day,
   todayDay,
+  chestReachDay,
   passageLocked,
   pressed,
   chestClaimed,
@@ -569,6 +572,7 @@ const FloorButton = memo(function FloorButton({
 }: {
   day: TowerDay;
   todayDay: number | null;
+  chestReachDay: number;
   passageLocked: boolean;
   pressed: boolean;
   chestClaimed: boolean;
@@ -589,7 +593,7 @@ const FloorButton = memo(function FloorButton({
       </button>
       <TowerFloorChest
         floorDay={day.day}
-        todayDay={todayDay}
+        progressDay={chestReachDay}
         floorState={day.state}
         claimed={chestClaimed}
         locked={passageLocked}

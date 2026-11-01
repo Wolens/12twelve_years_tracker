@@ -7,14 +7,14 @@ import { DungeonChestGraphic } from "./dungeon-chest-graphic";
 
 export function TowerFloorChest({
   floorDay,
-  todayDay,
+  progressDay,
   floorState,
   claimed,
   locked,
   onOpen,
 }: {
   floorDay: number;
-  todayDay: number | null;
+  progressDay: number | null;
   floorState: DayState;
   claimed: boolean;
   locked: boolean;
@@ -22,7 +22,7 @@ export function TowerFloorChest({
 }) {
   if (!isWeekStartFloor(floorDay)) return null;
 
-  const reachable = todayDay !== null && floorDay <= todayDay && !locked;
+  const reachable = progressDay !== null && floorDay <= progressDay && !locked;
   const entered = floorState === "done" || floorState === "visited" || floorState === "today";
   const missed = floorState === "missed" && !claimed;
   const canOpen = reachable && !claimed && entered;

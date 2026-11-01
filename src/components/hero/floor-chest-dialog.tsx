@@ -56,6 +56,7 @@ export function FloorChestDialog({
     const grant = window.setTimeout(() => {
       const r = openFloorChest(floorDay, reachDay);
       if (!r) {
+        grantedRef.current = false;
         onOpenChange(false);
         return;
       }

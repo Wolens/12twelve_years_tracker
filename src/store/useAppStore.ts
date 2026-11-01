@@ -590,6 +590,7 @@ const useAppStoreBase = create<Store>()(
             },
             coins
           ),
+          cloudTouchAt: syncNow(),
         }));
         return {
           itemId,
@@ -615,9 +616,12 @@ const useAppStoreBase = create<Store>()(
 
       deleteSphere: (id) =>
         set((s) => {
-          const removedTaskIds = new Set(
-            s.cycleTasks.filter((t) => t.sphereId === id).map((t) => t.id)
-          );
+          const removedTasks = s.cycleTasks.filter((t) => t.sphereId === id);
+          const removedTaskIds = new Set(removedTasks.map((t) => t.id));
+          let profile = s.profile;
+          for (const t of removedTasks) {
+            if (t.done) profile = revokeXpBySource(profile, xpSourceCycleTask(t.id));
+          }
           const dayAssignments = { ...s.dayAssignments };
           for (const key of Object.keys(dayAssignments)) {
             dayAssignments[key] = dayAssignments[key].filter(
@@ -637,11 +641,13 @@ const useAppStoreBase = create<Store>()(
             cycleTasks: s.cycleTasks.filter((t) => t.sphereId !== id),
             habits,
             habitCompletions,
+            profile,
             hiddenSphereIds: s.hiddenSphereIds.filter((sid) => sid !== id),
             weekHiddenSphereIds: s.weekHiddenSphereIds.filter((sid) => sid !== id),
             dayAssignments,
             weekFilterSphereId: resolveSphereFilterId(spheres, s.weekFilterSphereId),
             goalsFilterSphereId: resolveSphereFilterId(spheres, s.goalsFilterSphereId),
+            cloudTouchAt: syncNow(),
           };
         }),
 
@@ -840,6 +846,7 @@ const useAppStoreBase = create<Store>()(
             character,
             weeks: recomputeWeekClosed(cycleTasks, s.weeks),
             levelUpEvent: levelUp,
+            cloudTouchAt: syncNow(),
           };
         });
       },
@@ -857,6 +864,7 @@ const useAppStoreBase = create<Store>()(
             dayAssignments,
             profile,
             weeks: recomputeWeekClosed(cycleTasks, s.weeks),
+            cloudTouchAt: syncNow(),
           };
         }),
 

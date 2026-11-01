@@ -67,6 +67,7 @@ export function TodayHabitsSection({ onReward }: Props) {
                   const preview = previewHabitCompletionRewards();
                   toggle(habit.id, today);
                   onReward?.({
+                    taskId: `habit:${habit.id}`,
                     title: habit.title,
                     xp: preview.xp,
                     coins: preview.coins,
