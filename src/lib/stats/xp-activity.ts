@@ -1,6 +1,5 @@
 import type { XpLedgerEntry } from "@/types";
-import { todayISO } from "@/lib/gamification";
-import { weekDateRange } from "@/lib/gamification";
+import { formatLocalISO, todayISO, weekDateRange } from "@/lib/gamification";
 
 export type XpSourceBucket =
   | "tasks"
@@ -40,7 +39,7 @@ export function xpSourceBucketLabel(bucket: XpSourceBucket): string {
 function daysAgoISO(days: number): string {
   const d = new Date(`${todayISO()}T12:00:00`);
   d.setDate(d.getDate() - days);
-  return d.toISOString().slice(0, 10);
+  return formatLocalISO(d);
 }
 
 export function filterLedgerSince(
@@ -121,7 +120,7 @@ function eachDayInRange(start: string, end: string): string[] {
   const cursor = new Date(`${start}T12:00:00`);
   const last = new Date(`${end}T12:00:00`);
   while (cursor <= last) {
-    days.push(cursor.toISOString().slice(0, 10));
+    days.push(formatLocalISO(cursor));
     cursor.setDate(cursor.getDate() + 1);
   }
   return days;

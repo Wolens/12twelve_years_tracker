@@ -1,5 +1,5 @@
 import type { Habit, HabitCompletions, HabitSchedule } from "@/types";
-import { weekDateRange } from "@/lib/gamification";
+import { formatLocalISO, weekDateRange } from "@/lib/gamification";
 
 /** 1 = понедельник … 7 = воскресенье */
 export function isoWeekday(dateISO: string): number {
@@ -11,7 +11,7 @@ export function isoWeekday(dateISO: string): number {
 export function addDaysISO(dateISO: string, delta: number): string {
   const d = new Date(`${dateISO}T12:00:00`);
   d.setDate(d.getDate() + delta);
-  return d.toISOString().slice(0, 10);
+  return formatLocalISO(d);
 }
 
 export function isHabitDueOnSchedule(schedule: HabitSchedule, dateISO: string): boolean {

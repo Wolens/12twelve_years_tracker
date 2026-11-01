@@ -55,12 +55,15 @@ export function streakBonusXp(streak: number): number {
 }
 
 /** Календарный день в часовом поясе пользователя, не UTC. */
-export function todayISO(): string {
-  const d = new Date();
+export function formatLocalISO(d: Date): string {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
+}
+
+export function todayISO(): string {
+  return formatLocalISO(new Date());
 }
 
 export function daysBetween(a: string, b: string): number {
@@ -89,11 +92,7 @@ export function updateStreak(
 }
 
 export function getCurrentWeekNumber(cycleStartDate: string): number {
-  const start = new Date(cycleStartDate + "T00:00:00");
-  const now = new Date();
-  const diffDays = Math.floor(
-    (now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)
-  );
+  const diffDays = Math.max(0, daysBetween(cycleStartDate, todayISO()));
   const week = Math.floor(diffDays / 7) + 1;
   return Math.min(12, Math.max(1, week));
 }
@@ -113,13 +112,13 @@ export function weekDateRange(
   cycleStartDate: string,
   weekNumber: number
 ): { start: string; end: string } {
-  const start = new Date(cycleStartDate + "T00:00:00");
+  const start = new Date(cycleStartDate + "T12:00:00");
   start.setDate(start.getDate() + (weekNumber - 1) * 7);
   const end = new Date(start);
   end.setDate(end.getDate() + 6);
   return {
-    start: start.toISOString().slice(0, 10),
-    end: end.toISOString().slice(0, 10),
+    start: formatLocalISO(start),
+    end: formatLocalISO(end),
   };
 }
 

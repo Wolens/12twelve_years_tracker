@@ -35,7 +35,7 @@ export function detectCalendarDrift(state: Pick<AppState, "cycleStartDate" | "ac
   const { week: targetWeek, day: targetDay } = calendarPosition(state.cycleStartDate);
   const needsUpdate =
     targetWeek > state.activeWeek ||
-    (targetWeek === state.activeWeek && targetDay > state.activeDay);
+    (targetWeek === state.activeWeek && targetDay !== state.activeDay);
   return { targetWeek, targetDay, needsUpdate };
 }
 
