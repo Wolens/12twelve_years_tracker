@@ -41,7 +41,7 @@ export function SphereTabFilter({
 
   if (variant === "tactical") {
     return (
-      <div className={cn("no-print w-full max-w-2xl", className)}>
+      <div className={cn("no-print mx-auto w-full max-w-2xl", className)}>
         <div
           className="grid grid-cols-2 gap-2 sm:grid-cols-3"
           role="tablist"
@@ -115,7 +115,7 @@ export function SphereTabFilter({
         : "grid-cols-2 sm:grid-cols-3";
 
   return (
-    <div className={cn("no-print w-full max-w-2xl", className)}>
+    <div className={cn("no-print mx-auto w-full max-w-2xl", className)}>
       <div
         className={cn("grid gap-1.5 sm:gap-2", cols)}
         role="tablist"

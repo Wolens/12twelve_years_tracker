@@ -70,15 +70,23 @@ export const ItemCard = memo(function ItemCard({
         <div className={cn("h-1 w-full bg-gradient-to-r", STRIPE[item.rarity])} />
         <div className="p-2.5">
           <div className="flex items-start gap-2">
-            <span
-              className={cn(
-                "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-muted/80 dark:bg-black/40",
-                style.text
-              )}
-            >
-              <ItemGlyph itemId={item.id} glyph={item.glyph} className="h-8 w-8" />
-            </span>
-            <div className="flex min-w-0 flex-1 items-start justify-between gap-1 pt-0.5">
+            <div className="flex shrink-0 flex-col items-center gap-1">
+              <span
+                className={cn(
+                  "flex h-11 w-11 items-center justify-center rounded-xl bg-muted/80 dark:bg-black/40",
+                  style.text
+                )}
+              >
+                <ItemGlyph itemId={item.id} glyph={item.glyph} className="h-8 w-8" />
+              </span>
+              <ItemBonuses
+                health={item.healthBonus}
+                strength={item.strengthBonus}
+                compact
+                className="items-center"
+              />
+            </div>
+            <div className="min-w-0 flex-1">
               <p className={cn("text-[10px] font-semibold uppercase leading-tight tracking-wide", style.text)}>
                 {style.label}
               </p>
@@ -86,11 +94,11 @@ export const ItemCard = memo(function ItemCard({
                 health={item.healthBonus}
                 strength={item.strengthBonus}
                 compact
-                className="shrink-0"
+                className="mt-1"
               />
+              <p className="mt-1.5 text-sm font-medium leading-snug">{item.name}</p>
             </div>
           </div>
-          <p className="mt-2 text-sm font-medium leading-snug">{item.name}</p>
           <div className="mt-3">
             {owned ? (
               <div className="flex gap-1.5">

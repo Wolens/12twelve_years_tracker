@@ -7,7 +7,8 @@ import { mergeRecordsByUpdatedAt, syncTs } from "@/lib/sync-timestamp";
 
 function mergeCharacterIdentity(
   local: AppState,
-  remote: AppState
+  remote: AppState,
+  preferLocalTouch: boolean
 ): AppState["character"] {
   const localChar = normalizeCharacter(local.character);
   const remoteChar = normalizeCharacter(remote.character);
@@ -26,9 +27,12 @@ function mergeCharacterIdentity(
   const claimedFloorChests = Array.from(
     new Set([...(localChar.claimedFloorChests ?? []), ...(remoteChar.claimedFloorChests ?? [])])
   ).sort((a, b) => a - b);
-  const inventory = Array.from(
-    new Set([...(localChar.inventory ?? []), ...(remoteChar.inventory ?? [])])
-  );
+  const inventory = preferLocalTouch
+    ? Array.from(new Set(localChar.inventory ?? []))
+    : Array.from(new Set([...(localChar.inventory ?? []), ...(remoteChar.inventory ?? [])]));
+  const equipped = preferLocalTouch
+    ? { ...(localChar.equipped ?? {}) }
+    : { ...(remoteChar.equipped ?? {}), ...(localChar.equipped ?? {}) };
   const claimedLevelRewards = Array.from(
     new Set([
       ...(localChar.claimedLevelRewards ?? []),
@@ -40,6 +44,7 @@ function mergeCharacterIdentity(
     ...base,
     claimedFloorChests,
     inventory,
+    equipped,
     claimedLevelRewards,
     coins: Math.max(localChar.coins ?? 0, remoteChar.coins ?? 0),
   };
@@ -179,7 +184,7 @@ export function mergeAppStateForSync(
     habits,
     weeks: mergeWeeksData(base.weeks ?? [], other.weeks ?? []),
     profile: mergeProfiles(local.profile, remote.profile),
-    character: mergeCharacterIdentity(local, remote),
+    character: mergeCharacterIdentity(local, remote, preferLocalTouch),
     dayAssignments: mergeDayAssignments(
       local.dayAssignments ?? {},
       remote.dayAssignments ?? {},

@@ -493,6 +493,7 @@ const useAppStoreBase = create<Store>()(
             },
             -item.price
           ),
+          cloudTouchAt: syncNow(),
         }));
         return true;
       },
@@ -519,6 +520,7 @@ const useAppStoreBase = create<Store>()(
               },
               sellPrice
             ),
+            cloudTouchAt: syncNow(),
           };
         });
         return true;
@@ -534,6 +536,7 @@ const useAppStoreBase = create<Store>()(
               ...s.character,
               equipped: { ...s.character.equipped, [item.slot]: itemId },
             },
+            cloudTouchAt: syncNow(),
           };
         });
       },
@@ -542,7 +545,7 @@ const useAppStoreBase = create<Store>()(
         set((s) => {
           const equipped = { ...s.character.equipped };
           delete equipped[slot];
-          return { character: { ...s.character, equipped } };
+          return { character: { ...s.character, equipped }, cloudTouchAt: syncNow() };
         });
       },
 
@@ -563,6 +566,7 @@ const useAppStoreBase = create<Store>()(
               ? state.character.inventory
               : [...state.character.inventory, itemId],
           },
+          cloudTouchAt: syncNow(),
         }));
         return item.name;
       },

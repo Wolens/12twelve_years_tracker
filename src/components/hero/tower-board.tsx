@@ -333,6 +333,8 @@ export function TowerBoard() {
     setPicked((cur) => (cur === day ? null : day));
   }, []);
   const openChest = useCallback((day: number) => {
+    const claimed = useAppStore.getState().character.claimedFloorChests ?? [];
+    if (claimed.includes(day)) return;
     setChestFloor(day);
     setChestOpen(true);
   }, []);

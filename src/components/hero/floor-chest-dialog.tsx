@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { toast } from "@/components/ui/use-toast";
 
 export type FloorChestReveal = {
   itemId: string;
@@ -39,24 +40,32 @@ export function FloorChestDialog({
   const openFloorChest = useAppStore((s) => s.openFloorChest);
   const [phase, setPhase] = useState<"idle" | "shake" | "burst" | "reveal">("idle");
   const [result, setResult] = useState<FloorChestReveal | null>(null);
-  const grantedRef = useRef(false);
+  const sessionRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!open || floorDay === null) {
       setPhase("idle");
       setResult(null);
-      grantedRef.current = false;
+      sessionRef.current = null;
       return;
     }
-    if (grantedRef.current) return;
-    grantedRef.current = true;
+
+    const sessionKey = `${floorDay}:${reachDay}`;
+    if (sessionRef.current === sessionKey) return;
+    sessionRef.current = sessionKey;
+
     setPhase("shake");
     setResult(null);
     const shakeEnd = window.setTimeout(() => setPhase("burst"), 1200);
     const grant = window.setTimeout(() => {
       const r = openFloorChest(floorDay, reachDay);
       if (!r) {
-        grantedRef.current = false;
+        setPhase("idle");
+        sessionRef.current = null;
+        toast({
+          title: "Сундук недоступен",
+          description: "Уже открыт или этаж ещё не достигнут. Обнови страницу, если только что забрал награду.",
+        });
         onOpenChange(false);
         return;
       }

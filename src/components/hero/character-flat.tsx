@@ -220,37 +220,35 @@ function LegsExtra({ glyph, color }: { glyph: string; color: string }) {
   return <ALine color={color} top={498} hemY={860} />;
 }
 
-function HeldWeapon({ glyph, color }: { glyph: string; color: string }) {
-  if (glyph === "bow") {
-    return (
-      <g transform="translate(560 430)">
-        <path d="M20 20 Q-30 -40 20 -120" fill="none" stroke="#6b4a32" strokeWidth="6" />
-        <path d="M20 20 L20 -120" stroke="#f5f5f4" strokeWidth="2" />
-      </g>
-    );
-  }
-  if (glyph === "staff" || glyph === "spear" || glyph === "wand") {
-    return (
-      <g transform="translate(568 520)">
-        <path d="M0 40 V-280" stroke="#6b4a32" strokeWidth="7" strokeLinecap="round" />
-        <circle cy="-292" r="14" fill={color} />
-      </g>
-    );
-  }
-  if (glyph === "axe" || glyph === "mace") {
-    return (
-      <g transform="translate(560 480)">
-        <path d="M0 30 V-120" stroke="#6b4a32" strokeWidth="8" strokeLinecap="round" />
-        <circle cy="-140" r="22" fill={color} />
-      </g>
-    );
-  }
+function FemaleFaceDetail() {
   return (
-    <g transform="translate(548 500) rotate(16)">
-      <path d="M-7 8 L-5 -130 L0 -150 L5 -130 L7 8 Z" fill={color} />
-      <path d="M-22 6 H22" stroke="#e7e5e4" strokeWidth="8" strokeLinecap="round" />
-      <path d="M-5 10 H5 V36 H-5 Z" fill="#44403c" />
-    </g>
+    <svg
+      viewBox="0 0 864 1152"
+      className="pointer-events-none absolute inset-0 h-full w-full"
+      preserveAspectRatio="xMidYMid meet"
+      aria-hidden
+    >
+      <g fill="#2d1f14">
+        <ellipse cx="378" cy="212" rx="11" ry="13" />
+        <ellipse cx="486" cy="212" rx="11" ry="13" />
+        <ellipse cx="378" cy="214" rx="4.5" ry="5.5" fill="#0f0a06" />
+        <ellipse cx="486" cy="214" rx="4.5" ry="5.5" fill="#0f0a06" />
+      </g>
+      <path
+        d="M398 198 Q432 186 466 198"
+        stroke="#9a5c6b"
+        strokeWidth="3"
+        fill="none"
+        strokeLinecap="round"
+      />
+      <path
+        d="M416 252 Q432 262 448 252"
+        stroke="#c97878"
+        strokeWidth="2.5"
+        fill="none"
+        strokeLinecap="round"
+      />
+    </svg>
   );
 }
 
@@ -261,24 +259,20 @@ function GearOverlay({
   head,
   shirt,
   pants,
-  weapon,
   charm,
   headGlyph,
   torsoGlyph,
   legsGlyph,
-  weaponGlyph,
 }: {
   src: string;
   maskId: string;
   head?: string;
   shirt?: string;
   pants?: string;
-  weapon?: string;
   charm?: string;
   headGlyph?: string;
   torsoGlyph?: string;
   legsGlyph?: string;
-  weaponGlyph?: string;
 }) {
   const whiteId = `${maskId}-white`;
   return (
@@ -302,7 +296,6 @@ function GearOverlay({
       </g>
       {head && headGlyph && <HeadExtra glyph={headGlyph} color={head} />}
       {charm && <circle cx="432" cy="400" r="13" fill={charm} stroke="#fff" strokeWidth="3" />}
-      {weapon && weaponGlyph && <HeldWeapon glyph={weaponGlyph} color={weapon} />}
     </svg>
   );
 }
@@ -322,7 +315,6 @@ export const CharacterFlat = memo(function CharacterFlat({
   const torsoItem = equipped.torso ? itemById(equipped.torso) : undefined;
   const legsItem = equipped.legs ? itemById(equipped.legs) : undefined;
   const charmItem = equipped.charm ? itemById(equipped.charm) : undefined;
-  const weaponItem = equipped.weapon ? itemById(equipped.weapon) : undefined;
   const onTower = scene === "tower";
   const maskId = `hero-body-${useId().replace(/:/g, "")}`;
   const portrait = female ? "/hero-2d-female.png" : "/hero-2d-male.png";
@@ -336,13 +328,12 @@ export const CharacterFlat = memo(function CharacterFlat({
         head={headItem ? fillOf(equipped.head, "#0f766e") : undefined}
         shirt={torsoItem ? fillOf(equipped.torso, "#cbb89a") : undefined}
         pants={legsItem ? fillOf(equipped.legs, "#7c654c") : undefined}
-        weapon={weaponItem ? spriteColorForItem(equipped.weapon, RARITY_FILL[weaponItem.rarity]) : undefined}
         charm={charmItem ? fillOf(equipped.charm, RARITY_FILL[charmItem.rarity]) : undefined}
         headGlyph={headItem?.glyph}
         torsoGlyph={torsoItem?.glyph}
         legsGlyph={legsItem?.glyph}
-        weaponGlyph={weaponItem?.glyph}
       />
+      {female && !headItem && <FemaleFaceDetail />}
     </div>
   );
 });

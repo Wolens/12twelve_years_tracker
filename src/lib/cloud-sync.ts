@@ -3,7 +3,8 @@ import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { useAppStore } from "@/store/useAppStore";
 import { hasUserProgress, repairAppState } from "@/lib/app-state-health";
 import { applyRemoteOverGuest, mergeAppStateForSync } from "@/lib/cloud-merge";
-import { syncNow } from "@/lib/sync-timestamp";
+import { beginCloudSave, endCloudSave, isCloudSaveInFlight } from "@/lib/cloud-sync-guard";
+import { syncNow, syncTs } from "@/lib/sync-timestamp";
 
 export function isAppStateEmpty(state: AppState | null | undefined): boolean {
   if (!state) return true;
@@ -71,11 +72,13 @@ function mergeAndApply(local: AppState, remote: AppState): AppState {
   return repairAppState(mergeAppStateForSync(local, remote));
 }
 
-/** Подтянуть облако и слить с локальным (без записи). */
+/** Подтянуть облако только если там явно более свежий снимок (другое устройство). */
 export async function pullCloudStateIntoApp(userId: string): Promise<boolean> {
+  if (isCloudSaveInFlight()) return false;
   const remote = await fetchCloudAppState(userId);
   if (!remote || isAppStateEmpty(remote)) return false;
   const local = repairAppState(useAppStore.getState().exportState());
+  if (syncTs(remote.cloudTouchAt) <= syncTs(local.cloudTouchAt)) return false;
   const merged = repairAppState(
     mergeAppStateForSync(local, remote, { preferLocalUi: true })
   );
@@ -125,17 +128,25 @@ export async function saveCloudAppStateSafe(
   userId: string,
   state: AppState
 ): Promise<void> {
-  const local = repairAppState({ ...state, cloudTouchAt: syncNow() });
-  const remote = await fetchCloudAppState(userId);
+  beginCloudSave();
+  try {
+    const savedAt = syncNow();
+    const local = repairAppState({ ...state, cloudTouchAt: savedAt });
+    const remote = await fetchCloudAppState(userId);
 
-  if (!remote || isAppStateEmpty(remote)) {
-    await saveCloudAppState(userId, local);
-    return;
-  }
+    if (!remote || isAppStateEmpty(remote)) {
+      await saveCloudAppState(userId, local);
+      useAppStore.setState({ cloudTouchAt: savedAt });
+      return;
+    }
 
-  const merged = mergeAndApply(local, remote);
-  const result = await saveCloudAppState(userId, merged);
-  if (result.ok) {
-    useAppStore.getState().importState(merged);
+    const merged = mergeAndApply(local, remote);
+    const toSave = { ...merged, cloudTouchAt: savedAt };
+    const result = await saveCloudAppState(userId, toSave);
+    if (result.ok) {
+      useAppStore.setState({ cloudTouchAt: savedAt });
+    }
+  } finally {
+    endCloudSave();
   }
 }

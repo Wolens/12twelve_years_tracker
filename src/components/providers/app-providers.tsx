@@ -193,7 +193,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
       clearTimeout(pullTimer);
       pullTimer = setTimeout(() => {
         void pullCloudStateIntoApp(userId);
-      }, 400);
+      }, 2500);
     };
 
     document.addEventListener("visibilitychange", schedulePull);
