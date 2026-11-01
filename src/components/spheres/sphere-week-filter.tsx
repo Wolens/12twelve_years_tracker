@@ -43,14 +43,17 @@ export function SphereTabFilter({
     return (
       <div className={cn("no-print mx-auto w-full max-w-2xl", className)}>
         <div
-          className="grid grid-cols-2 gap-2 sm:grid-cols-3"
+          className="flex flex-wrap justify-center gap-2"
           role="tablist"
           aria-label={ariaLabel}
         >
           {spheres.map((sphere) => {
             const active = activeId === sphere.id;
             return (
-              <div key={sphere.id} className="relative min-w-0">
+              <div
+                key={sphere.id}
+                className="relative w-[calc(50%-0.25rem)] min-w-[8.25rem] max-w-[11rem] sm:w-[calc(33.333%-0.35rem)]"
+              >
                 <button
                   type="button"
                   role="tab"
@@ -107,17 +110,10 @@ export function SphereTabFilter({
     );
   }
 
-  const cols =
-    spheres.length <= 2
-      ? "grid-cols-2"
-      : spheres.length === 3
-        ? "grid-cols-3"
-        : "grid-cols-2 sm:grid-cols-3";
-
   return (
     <div className={cn("no-print mx-auto w-full max-w-2xl", className)}>
       <div
-        className={cn("grid gap-1.5 sm:gap-2", cols)}
+        className="flex flex-wrap justify-center gap-1.5 sm:gap-2"
         role="tablist"
         aria-label={ariaLabel}
       >
@@ -128,7 +124,7 @@ export function SphereTabFilter({
             <div
               key={sphere.id}
               className={cn(
-                "relative flex min-w-0 items-stretch",
+                "relative flex w-[calc(50%-0.25rem)] min-w-[8.25rem] max-w-[11rem] items-stretch sm:w-[calc(33.333%-0.35rem)]",
                 active && "overflow-hidden rounded-lg border border-opacity-90 bg-secondary dark:bg-black/45"
               )}
               style={

@@ -5,6 +5,11 @@ import { useAppStore } from "@/store/useAppStore";
 import { xpProgressInLevel, rankTitle } from "@/lib/gamification";
 import { WeekStrip } from "@/components/dashboard/week-strip";
 import { SphereWeekFilter } from "@/components/spheres/sphere-week-filter";
+import {
+  DashboardViewTabs,
+  type DashboardView,
+} from "@/components/dashboard/dashboard-view-tabs";
+import { CycleMapView } from "@/components/dashboard/cycle-map-view";
 import { WeekDetail } from "@/components/dashboard/week-detail";
 import { WeekNotesArchive } from "@/components/dashboard/week-notes-archive";
 import { Progress } from "@/components/ui/progress";
@@ -21,6 +26,7 @@ export default function DashboardPage() {
   const activeWeek = useAppStore((s) => s.activeWeek);
   const [selectedWeek, setSelectedWeek] = useState(activeWeek);
   const [detailWeek, setDetailWeek] = useState(activeWeek);
+  const [dashboardView, setDashboardView] = useState<DashboardView>("week");
   const xp = xpProgressInLevel(profile.xp);
 
   useEffect(() => {
@@ -68,9 +74,24 @@ export default function DashboardPage() {
         onSelect={pickWeek}
       />
 
-      <SphereWeekFilter className="px-4" />
+      <DashboardViewTabs
+        value={dashboardView}
+        onChange={setDashboardView}
+        className="pt-1"
+      />
 
-      <WeekDetail week={detailWeek} />
+      <SphereWeekFilter className="px-4 pt-2" />
+
+      {dashboardView === "week" ? (
+        <WeekDetail week={detailWeek} />
+      ) : (
+        <CycleMapView
+          onOpenWeek={(week) => {
+            pickWeek(week);
+            setDashboardView("week");
+          }}
+        />
+      )}
 
       <WeekNotesArchive
         onOpenWeek={(w) => {

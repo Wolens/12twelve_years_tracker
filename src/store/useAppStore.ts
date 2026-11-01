@@ -196,6 +196,7 @@ type Store = AppState & {
     taskId: string,
     patch: Partial<Pick<CycleTask, "title" | "week" | "planDay">>
   ) => void;
+  moveCycleTaskToWeek: (taskId: string, week: number) => void;
   toggleCycleTask: (taskId: string) => void;
   deleteCycleTask: (taskId: string) => void;
   addCounterIncrement: (goalId: string, amount: number, date?: string) => void;
@@ -797,13 +798,27 @@ const useAppStoreBase = create<Store>()(
       updateCycleTask: (taskId, patch) =>
         set((s) => {
           const prev = s.cycleTasks.find((t) => t.id === taskId);
+          if (!prev) return s;
           let dayAssignments = s.dayAssignments;
-          if (prev && "planDay" in patch) {
+          const nextWeek = patch.week ?? prev.week;
+          if (patch.week != null && patch.week !== prev.week) {
+            dayAssignments = removeGoalFromWeekPlan(dayAssignments, prev.week, taskId);
+            const planDay =
+              patch.planDay !== undefined ? patch.planDay : prev.planDay;
+            if (planDay != null) {
+              dayAssignments = assignGoalToDay(
+                dayAssignments,
+                nextWeek,
+                planDay,
+                taskId
+              );
+            }
+          } else if ("planDay" in patch) {
             dayAssignments = removeGoalFromWeekPlan(dayAssignments, prev.week, taskId);
             if (patch.planDay != null) {
               dayAssignments = assignGoalToDay(
                 dayAssignments,
-                patch.week ?? prev.week,
+                nextWeek,
                 patch.planDay,
                 taskId
               );
@@ -816,6 +831,35 @@ const useAppStoreBase = create<Store>()(
             cycleTasks,
             dayAssignments,
             weeks: recomputeWeekClosed(cycleTasks, s.weeks),
+            cloudTouchAt: syncNow(),
+          };
+        }),
+
+      moveCycleTaskToWeek: (taskId, week) =>
+        set((s) => {
+          const prev = s.cycleTasks.find((t) => t.id === taskId);
+          if (!prev || prev.week === week || week < 1 || week > 12) return s;
+          let dayAssignments = removeGoalFromWeekPlan(
+            s.dayAssignments,
+            prev.week,
+            taskId
+          );
+          if (prev.planDay != null) {
+            dayAssignments = assignGoalToDay(
+              dayAssignments,
+              week,
+              prev.planDay,
+              taskId
+            );
+          }
+          const cycleTasks = s.cycleTasks.map((t) =>
+            t.id === taskId ? { ...t, week, updatedAt: syncNow() } : t
+          );
+          return {
+            cycleTasks,
+            dayAssignments,
+            weeks: recomputeWeekClosed(cycleTasks, s.weeks),
+            cloudTouchAt: syncNow(),
           };
         }),
 
