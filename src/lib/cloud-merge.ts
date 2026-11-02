@@ -133,10 +133,35 @@ export function mergeHabitCompletions(
   remote: HabitCompletions,
   preferLocal: boolean
 ): HabitCompletions {
-  const source = preferLocal ? local : remote;
+  if (preferLocal) {
+    const out: HabitCompletions = {};
+    for (const [date, day] of Object.entries(local ?? {})) {
+      if (day && typeof day === "object") out[date] = { ...day };
+    }
+    return out;
+  }
+
   const out: HabitCompletions = {};
-  for (const key of Object.keys(source ?? {})) {
-    out[key] = [...(source[key] ?? [])];
+  const dates = Array.from(
+    new Set([...Object.keys(local ?? {}), ...Object.keys(remote ?? {})])
+  );
+  for (const date of dates) {
+    const lDay = local?.[date] ?? {};
+    const rDay = remote?.[date] ?? {};
+    const habitIds = Array.from(
+      new Set([...Object.keys(lDay), ...Object.keys(rDay)])
+    );
+    const merged: Record<string, number> = {};
+    for (const habitId of habitIds) {
+      const l = lDay[habitId] ?? 0;
+      const r = rDay[habitId] ?? 0;
+      const n = Math.max(
+        typeof l === "number" ? l : 0,
+        typeof r === "number" ? r : 0
+      );
+      if (n > 0) merged[habitId] = n;
+    }
+    if (Object.keys(merged).length > 0) out[date] = merged;
   }
   return out;
 }

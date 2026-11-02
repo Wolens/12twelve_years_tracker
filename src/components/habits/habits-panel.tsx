@@ -29,7 +29,7 @@ export function HabitsPanel() {
 
       {active.length === 0 && (
         <p className="rounded-xl border border-dashed border-white/15 px-4 py-6 text-center text-sm text-muted-foreground">
-          Пока нет привычек. Нажми «Привычка» — они отдельно от целей на 12 недель.
+          Пока нет привычек. На «Сегодня» считай выполнения кнопками + и −.
         </p>
       )}
 

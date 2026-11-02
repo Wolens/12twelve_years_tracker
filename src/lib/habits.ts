@@ -37,26 +37,55 @@ export function habitsDueOn(
   });
 }
 
+export function getHabitCount(
+  completions: HabitCompletions,
+  dateISO: string,
+  habitId: string
+): number {
+  const n = completions[dateISO]?.[habitId];
+  return typeof n === "number" && n > 0 ? n : 0;
+}
+
 export function isCompleted(
   completions: HabitCompletions,
   dateISO: string,
   habitId: string
 ): boolean {
-  return (completions[dateISO] ?? []).includes(habitId);
+  return getHabitCount(completions, dateISO, habitId) >= 1;
 }
 
-export function toggleCompletion(
+export function adjustHabitCount(
   completions: HabitCompletions,
   dateISO: string,
-  habitId: string
+  habitId: string,
+  delta: number
 ): HabitCompletions {
-  const prev = completions[dateISO] ?? [];
-  const has = prev.includes(habitId);
-  const nextList = has ? prev.filter((id) => id !== habitId) : [...prev, habitId];
+  if (delta === 0) return completions;
+  const prev = getHabitCount(completions, dateISO, habitId);
+  const nextCount = Math.max(0, prev + delta);
   const next = { ...completions };
-  if (nextList.length === 0) delete next[dateISO];
-  else next[dateISO] = nextList;
+  const day = { ...(next[dateISO] ?? {}) };
+  if (nextCount === 0) {
+    delete day[habitId];
+  } else {
+    day[habitId] = nextCount;
+  }
+  if (Object.keys(day).length === 0) delete next[dateISO];
+  else next[dateISO] = day;
   return next;
+}
+
+/** Сумма всех отметок (для snapshot синхронизации ачивок). */
+export function totalMarksForSnapshot(completions: HabitCompletions): number {
+  let sum = 0;
+  for (const date of Object.keys(completions)) {
+    const day = completions[date];
+    if (!day) continue;
+    for (const n of Object.values(day)) {
+      if (typeof n === "number" && n > 0) sum += n;
+    }
+  }
+  return sum;
 }
 
 export function habitStreak(
@@ -112,14 +141,34 @@ export function completionRateForDates(
   return { done, due, percent };
 }
 
+/** Сумма count за период (объём, напр. стаканы воды). */
+export function totalCountForDates(
+  habit: Habit,
+  completions: HabitCompletions,
+  dates: string[]
+): number {
+  let sum = 0;
+  for (const date of dates) {
+    if (!isHabitDueOn(habit, date)) continue;
+    sum += getHabitCount(completions, date, habit.id);
+  }
+  return sum;
+}
+
 export function pruneHabitCompletions(
   completions: HabitCompletions,
   validHabitIds: Set<string>
 ): HabitCompletions {
   const out: HabitCompletions = {};
-  for (const [date, ids] of Object.entries(completions)) {
-    const filtered = ids.filter((id) => validHabitIds.has(id));
-    if (filtered.length > 0) out[date] = filtered;
+  for (const [date, day] of Object.entries(completions)) {
+    if (!day || typeof day !== "object") continue;
+    const filtered: Record<string, number> = {};
+    for (const [habitId, count] of Object.entries(day)) {
+      if (!validHabitIds.has(habitId)) continue;
+      const n = typeof count === "number" ? count : Number(count);
+      if (Number.isFinite(n) && n > 0) filtered[habitId] = Math.floor(n);
+    }
+    if (Object.keys(filtered).length > 0) out[date] = filtered;
   }
   return out;
 }

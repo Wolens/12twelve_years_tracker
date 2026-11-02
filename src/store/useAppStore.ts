@@ -21,7 +21,7 @@ import {
   XP_TASK,
   XP_WEEK_CLOSED,
   XP_GOAL_COMPLETED,
-  XP_HABIT,
+  XP_HABIT_TICK,
   DEFAULT_SPHERES,
 } from "@/lib/constants";
 import { todayISO } from "@/lib/gamification";
@@ -33,7 +33,7 @@ import {
   xpSourceGoalComplete,
   xpSourceOnetimeGoal,
   xpSourceWeekClose,
-  xpSourceHabit,
+  xpSourceHabitTick,
   type LevelUpEvent,
 } from "@/lib/xp-ledger";
 import {
@@ -56,9 +56,9 @@ import {
 } from "@/lib/cycle-calendar-sync";
 import { weekTasksAllDone } from "@/lib/week-completion";
 import {
-  isCompleted as habitIsCompleted,
+  adjustHabitCount as adjustHabitCountMap,
+  getHabitCount,
   pruneHabitCompletions,
-  toggleCompletion as toggleHabitCompletionMap,
 } from "@/lib/habits";
 import {
   hasUserProgress,
@@ -83,7 +83,7 @@ import {
   COINS_PER_GOAL,
   COINS_PER_RITUAL,
   COINS_PER_TASK,
-  COINS_PER_HABIT,
+  COINS_PER_HABIT_TICK,
   COINS_PER_WEEK,
 } from "@/lib/rpg/coins";
 import { tendFlame, applyFlameDecay, applyDailyFirstVisitHeal } from "@/lib/rpg/season-flame";
@@ -213,7 +213,7 @@ type Store = AppState & {
   addHabit: (habit: Omit<Habit, "id" | "updatedAt">) => void;
   updateHabit: (id: string, patch: Partial<Omit<Habit, "id">>) => void;
   archiveHabit: (id: string) => void;
-  toggleHabitForDate: (habitId: string, date?: string) => void;
+  adjustHabitCountForDate: (habitId: string, delta: number, date?: string) => void;
   setActiveDay: (day: number) => void;
   setActiveWeek: (week: number) => void;
   completeActiveWeekAndAdvance: (allowWithoutXp?: boolean) => void;
@@ -1105,34 +1105,39 @@ const useAppStoreBase = create<Store>()(
           cloudTouchAt: syncNow(),
         })),
 
-      toggleHabitForDate: (habitId, date) => {
+      adjustHabitCountForDate: (habitId, delta, date) => {
+        if (delta === 0) return;
         const d = date ?? todayISO();
         set((s) => {
           const habit = s.habits.find((h) => h.id === habitId);
           if (!habit || habit.archived) return s;
-          const wasDone = habitIsCompleted(s.habitCompletions, d, habitId);
-          const habitCompletions = toggleHabitCompletionMap(
+          const prevCount = getHabitCount(s.habitCompletions, d, habitId);
+          if (delta < 0 && prevCount === 0) return s;
+          const habitCompletions = adjustHabitCountMap(
             s.habitCompletions,
             d,
-            habitId
+            habitId,
+            delta
           );
-          const sourceId = xpSourceHabit(habitId, d);
+          const newCount = getHabitCount(habitCompletions, d, habitId);
           let profile = s.profile;
           let character = s.character;
           let levelUp: LevelUpEvent = null;
-          if (!wasDone) {
+          if (delta > 0) {
+            const sourceId = xpSourceHabitTick(habitId, d, newCount);
             const res = grantXp(profile, {
-              baseAmount: XP_HABIT,
+              baseAmount: XP_HABIT_TICK,
               label: habit.title,
               sourceId,
               withStreak: true,
             });
             profile = res.profile;
-            character = adjustCoins(character, COINS_PER_HABIT);
+            character = adjustCoins(character, COINS_PER_HABIT_TICK);
             levelUp = res.levelUp;
           } else {
+            const sourceId = xpSourceHabitTick(habitId, d, prevCount);
             profile = revokeXpBySource(profile, sourceId);
-            character = adjustCoins(character, -COINS_PER_HABIT);
+            character = adjustCoins(character, -COINS_PER_HABIT_TICK);
           }
           return {
             habitCompletions,

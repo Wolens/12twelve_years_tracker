@@ -6,7 +6,8 @@ export function HeroHabitsPanel() {
   return (
     <div data-tour="hero-habits" className="space-y-2">
       <p className="text-sm text-muted-foreground">
-        Календарные повторения — отдельно от целей. Отмечай на «Сегодня».
+        Календарные повторения — отдельно от целей. На «Сегодня» отмечай сколько раз
+        выполнил (+/−).
       </p>
       <HabitsPanel />
     </div>

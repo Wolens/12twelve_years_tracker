@@ -72,8 +72,8 @@ export type WeekData = {
   bonusAwarded?: boolean;
 };
 
-/** ISO date → id привычек, отмеченных в этот день */
-export type HabitCompletions = Record<string, string[]>;
+/** ISO date → id привычки → сколько раз отмечено за день */
+export type HabitCompletions = Record<string, Record<string, number>>;
 
 export type HabitScope = "cycle" | "persistent";
 
@@ -178,4 +178,4 @@ export type AppState = {
 
 export const STORAGE_KEY = "twelve-weeks-tracker-v1";
 export const AUTH_STORAGE_KEY = "twelve-weeks-auth-v1";
-export const DATA_VERSION = 16;
+export const DATA_VERSION = 17;

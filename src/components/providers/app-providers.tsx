@@ -17,6 +17,7 @@ import {
   resetCloudHydrationGate,
 } from "@/lib/cloud-hydration";
 import { markGuestSessionDirty } from "@/lib/cloud-guest-session";
+import { totalMarksForSnapshot } from "@/lib/habits";
 import { repairAppState, stateNeedsRepair } from "@/lib/app-state-health";
 import { toast } from "@/components/ui/use-toast";
 import type { AppState } from "@/types";
@@ -27,9 +28,7 @@ function achievementProgressSnapshot(state: AppState): string {
   for (const task of state.cycleTasks) if (task.done) done++;
   let bonus = 0;
   for (const week of state.weeks) if (week.bonusAwarded) bonus++;
-  let marks = 0;
-  const completions = state.habitCompletions ?? {};
-  for (const date in completions) marks += completions[date]?.length ?? 0;
+  let marks = totalMarksForSnapshot(state.habitCompletions ?? {});
   const activeHabits = (state.habits ?? []).reduce((n, habit) => n + (habit.archived ? 0 : 1), 0);
   const profile = state.profile;
   const character = state.character;

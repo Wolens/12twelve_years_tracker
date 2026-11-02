@@ -17,33 +17,46 @@ const RARITY_FILL: Record<ItemRarity, string> = {
   legendary: "#fcd34d",
 };
 
+/** Ниже этой линии — торс (одежда не рисуется на волосах/лице). */
+const TORSO_TOP_Y = 278;
+/** Ниже — ноги. */
+const LEGS_TOP_Y = 518;
+/** Зона лица для head-слота. */
+const HEAD_ZONE_Y = 292;
+
 function fillOf(id: string | undefined, fallback: string) {
   if (!id) return fallback;
   return spriteColorForItem(id, fallback);
 }
 
-/** Scoop-neck top. Shoulders and sleeves follow the measured silhouette; hem overlaps the baked shorts. */
+function headHidesFace(glyph?: string): boolean {
+  return glyph === "hood" || glyph === "helm" || glyph === "veil";
+}
+
+/** Scoop-neck top — плечи не выше TORSO_TOP_Y. */
 function Top({
   color,
   sleeve,
   hem,
   cuff,
+  shoulderY = TORSO_TOP_Y,
 }: {
   color: string;
   sleeve: number;
   hem: number;
   cuff?: number;
+  shoulderY?: number;
 }) {
   return (
     <g fill={color}>
       <path
-        d={`M292 304
-            L348 262
-            L396 262
-            C396 332 418 356 432 356
-            C446 356 468 332 468 262
-            L516 262
-            L572 304
+        d={`M292 ${shoulderY + 26}
+            L348 ${shoulderY}
+            L396 ${shoulderY}
+            C396 ${shoulderY + 70} 418 ${shoulderY + 94} 432 ${shoulderY + 94}
+            C446 ${shoulderY + 94} 468 ${shoulderY + 70} 468 ${shoulderY}
+            L516 ${shoulderY}
+            L572 ${shoulderY + 26}
             L572 ${sleeve}
             L520 ${sleeve}
             L520 ${hem}
@@ -63,7 +76,6 @@ function Top({
   );
 }
 
-/** Baseball cap: smooth dome over the hair, not clipped to the hair silhouette. */
 function CapWear({ color }: { color: string }) {
   return (
     <g>
@@ -81,8 +93,9 @@ function CapWear({ color }: { color: string }) {
 function HeadOnBody({ glyph, color }: { glyph: string; color: string }) {
   switch (glyph) {
     case "cap":
-      return null;
     case "beret":
+    case "crown":
+    case "helm":
       return null;
     case "band":
       return <rect x="378" y="148" width="108" height="20" rx="8" fill={color} />;
@@ -104,16 +117,11 @@ function HeadOnBody({ glyph, color }: { glyph: string; color: string }) {
       );
     case "circlet":
       return <rect x="380" y="124" width="104" height="11" rx="5" fill={color} />;
-    case "crown":
-      return null;
-    case "helm":
-      return null;
     default:
       return null;
   }
 }
 
-/** Headwear with its own shape (not the hair/body mask). */
 function HeadExtra({ glyph, color }: { glyph: string; color: string }) {
   if (glyph === "cap") return <CapWear color={color} />;
   if (glyph === "crown") {
@@ -135,11 +143,12 @@ function HeadExtra({ glyph, color }: { glyph: string; color: string }) {
 }
 
 function TorsoOnBody({ glyph, color }: { glyph: string; color: string }) {
+  const sy = TORSO_TOP_Y;
   if (glyph === "vest") {
     return (
       <path
         fill={color}
-        d="M352 286 L392 266 L404 266 C404 330 418 348 432 348 C446 348 460 330 460 266 L472 266 L512 286 V572 H352 Z"
+        d={`M352 ${sy + 8} L392 ${sy - 12} L404 ${sy - 12} C404 ${sy + 52} 418 ${sy + 70} 432 ${sy + 70} C446 ${sy + 70} 460 ${sy + 52} 460 ${sy - 12} L472 ${sy - 12} L512 ${sy + 8} V572 H352 Z`}
       />
     );
   }
@@ -147,7 +156,7 @@ function TorsoOnBody({ glyph, color }: { glyph: string; color: string }) {
     return (
       <path
         fill={color}
-        d="M300 300 L352 266 L396 266 C396 332 418 354 432 354 C446 354 468 332 468 266 L512 266 L564 300 V500 H300 Z"
+        d={`M300 ${sy + 22} L352 ${sy - 12} L396 ${sy - 12} C396 ${sy + 54} 418 ${sy + 76} 432 ${sy + 76} C446 ${sy + 76} 468 ${sy + 54} 468 ${sy - 12} L512 ${sy - 12} L564 ${sy + 22} V500 H300 Z`}
       />
     );
   }
@@ -155,22 +164,21 @@ function TorsoOnBody({ glyph, color }: { glyph: string; color: string }) {
     return (
       <path
         fill={color}
-        d="M356 286 L396 266 L408 266 C408 328 420 346 432 346 C444 346 456 328 456 266 L468 266 L508 286 V530 H356 Z"
+        d={`M356 ${sy + 8} L396 ${sy - 12} L408 ${sy - 12} C408 ${sy + 50} 420 ${sy + 68} 432 ${sy + 68} C444 ${sy + 68} 456 ${sy + 50} 456 ${sy - 12} L468 ${sy - 12} L508 ${sy + 8} V530 H356 Z`}
       />
     );
   }
   if (glyph === "jacket" || glyph === "armor") {
     return (
       <g>
-        <Top color={color} sleeve={586} hem={548} cuff={574} />
-        {glyph === "armor" && <rect x="392" y="300" width="80" height="188" fill="#000" opacity="0.16" />}
+        <Top color={color} sleeve={586} hem={548} cuff={574} shoulderY={sy} />
+        {glyph === "armor" && <rect x="392" y={sy + 22} width="80" height="188" fill="#000" opacity="0.16" />}
       </g>
     );
   }
-  return <Top color={color} sleeve={468} hem={590} cuff={456} />;
+  return <Top color={color} sleeve={468} hem={590} cuff={456} shoulderY={sy} />;
 }
 
-/** Fills the gap between the legs so a skirt or dress is one piece, and stays clear of the hands. */
 function ALine({ color, top, hemY }: { color: string; top: number; hemY: number }) {
   return <path fill={color} d={`M342 ${top} H522 L548 ${hemY} H316 Z`} />;
 }
@@ -220,31 +228,45 @@ function LegsExtra({ glyph, color }: { glyph: string; color: string }) {
   return <ALine color={color} top={498} hemY={860} />;
 }
 
+/** Лицо поверх пустой зоны female PNG (убирает «усы», добавляет глаза как у male). */
 function FemaleFaceDetail() {
+  const skin = "#fdd5b0";
+  const skinShadow = "#e8b892";
   return (
     <svg
       viewBox="0 0 864 1152"
-      className="pointer-events-none absolute inset-0 h-full w-full"
+      className="pointer-events-none absolute inset-0 z-[25] h-full w-full"
       preserveAspectRatio="xMidYMid meet"
       aria-hidden
     >
-      <g fill="#2d1f14">
-        <ellipse cx="378" cy="212" rx="11" ry="13" />
-        <ellipse cx="486" cy="212" rx="11" ry="13" />
-        <ellipse cx="378" cy="214" rx="4.5" ry="5.5" fill="#0f0a06" />
-        <ellipse cx="486" cy="214" rx="4.5" ry="5.5" fill="#0f0a06" />
-      </g>
+      <ellipse cx="432" cy="198" rx="72" ry="88" fill={skin} opacity="0.97" />
+      <ellipse cx="432" cy="228" rx="38" ry="22" fill={skinShadow} opacity="0.35" />
       <path
-        d="M398 198 Q432 186 466 198"
-        stroke="#9a5c6b"
-        strokeWidth="3"
+        d="M388 158 Q404 148 420 154 Q432 158 444 154 Q460 148 476 158"
+        stroke="#8b5a45"
+        strokeWidth="4"
+        fill="none"
+        strokeLinecap="round"
+      />
+      <ellipse cx="396" cy="178" rx="20" ry="24" fill="#fff" />
+      <ellipse cx="468" cy="178" rx="20" ry="24" fill="#fff" />
+      <ellipse cx="396" cy="180" rx="11" ry="14" fill="#5c4033" />
+      <ellipse cx="468" cy="180" rx="11" ry="14" fill="#5c4033" />
+      <ellipse cx="398" cy="182" rx="5" ry="6" fill="#1a120c" />
+      <ellipse cx="470" cy="182" rx="5" ry="6" fill="#1a120c" />
+      <ellipse cx="400" cy="176" rx="3" ry="3" fill="#fff" opacity="0.85" />
+      <ellipse cx="472" cy="176" rx="3" ry="3" fill="#fff" opacity="0.85" />
+      <path
+        d="M418 200 Q432 208 446 200"
+        stroke="#c9957a"
+        strokeWidth="2.5"
         fill="none"
         strokeLinecap="round"
       />
       <path
-        d="M416 252 Q432 262 448 252"
-        stroke="#c97878"
-        strokeWidth="2.5"
+        d="M416 232 Q432 242 448 232"
+        stroke="#d47878"
+        strokeWidth="3"
         fill="none"
         strokeLinecap="round"
       />
@@ -252,7 +274,6 @@ function FemaleFaceDetail() {
   );
 }
 
-/** Clothes are painted only where the character pixels are, so they follow the body and cover the baked shorts. */
 function GearOverlay({
   src,
   maskId,
@@ -275,8 +296,17 @@ function GearOverlay({
   legsGlyph?: string;
 }) {
   const whiteId = `${maskId}-white`;
+  const torsoMaskId = `${maskId}-torso`;
+  const legsMaskId = `${maskId}-legs`;
+  const headMaskId = `${maskId}-head`;
+
   return (
-    <svg viewBox="0 0 864 1152" className="absolute inset-0 h-full w-full" preserveAspectRatio="xMidYMid meet" aria-hidden>
+    <svg
+      viewBox="0 0 864 1152"
+      className="absolute inset-0 z-10 h-full w-full"
+      preserveAspectRatio="xMidYMid meet"
+      aria-hidden
+    >
       <defs>
         <filter id={whiteId} colorInterpolationFilters="sRGB">
           <feColorMatrix type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 1 0" />
@@ -284,18 +314,64 @@ function GearOverlay({
         <mask id={maskId} maskUnits="userSpaceOnUse" x="0" y="0" width="864" height="1152">
           <image href={src} width="864" height="1152" filter={`url(#${whiteId})`} />
         </mask>
+        <mask id={torsoMaskId} maskUnits="userSpaceOnUse" x="0" y="0" width="864" height="1152">
+          <image href={src} width="864" height="1152" filter={`url(#${whiteId})`} />
+          <rect x="0" y="0" width="864" height={TORSO_TOP_Y} fill="black" />
+        </mask>
+        <mask id={legsMaskId} maskUnits="userSpaceOnUse" x="0" y="0" width="864" height="1152">
+          <image href={src} width="864" height="1152" filter={`url(#${whiteId})`} />
+          <rect x="0" y="0" width="864" height={LEGS_TOP_Y} fill="black" />
+        </mask>
+        <mask id={headMaskId} maskUnits="userSpaceOnUse" x="0" y="0" width="864" height="1152">
+          <rect x="0" y="0" width="864" height="1152" fill="black" />
+          <image href={src} width="864" height="1152" filter={`url(#${whiteId})`} />
+          <rect x="0" y={HEAD_ZONE_Y} width="864" height={1152 - HEAD_ZONE_Y} fill="black" />
+        </mask>
+        <clipPath id={`${maskId}-torso-clip`}>
+          <rect x="240" y={TORSO_TOP_Y} width="384" height={1152 - TORSO_TOP_Y} />
+        </clipPath>
+        <clipPath id={`${maskId}-legs-clip`}>
+          <rect x="240" y={LEGS_TOP_Y} width="384" height={1152 - LEGS_TOP_Y} />
+        </clipPath>
       </defs>
-      <g mask={`url(#${maskId})`}>
+
+      <g mask={`url(#${legsMaskId})`} clipPath={`url(#${maskId}-legs-clip)`}>
         {pants && legsGlyph && <LegsOnBody glyph={legsGlyph} color={pants} />}
       </g>
       {pants && legsGlyph && <LegsExtra glyph={legsGlyph} color={pants} />}
+
       {shirt && torsoGlyph && <TorsoExtra glyph={torsoGlyph} color={shirt} />}
-      <g mask={`url(#${maskId})`}>
+      <g mask={`url(#${torsoMaskId})`} clipPath={`url(#${maskId}-torso-clip)`}>
         {shirt && torsoGlyph && <TorsoOnBody glyph={torsoGlyph} color={shirt} />}
+      </g>
+
+      <g mask={`url(#${headMaskId})`}>
         {head && headGlyph && <HeadOnBody glyph={headGlyph} color={head} />}
       </g>
-      {head && headGlyph && <HeadExtra glyph={headGlyph} color={head} />}
+
       {charm && <circle cx="432" cy="400" r="13" fill={charm} stroke="#fff" strokeWidth="3" />}
+    </svg>
+  );
+}
+
+function HeadExtraLayer({
+  head,
+  headGlyph,
+}: {
+  head?: string;
+  headGlyph?: string;
+}) {
+  if (!head || !headGlyph) return null;
+  const extra = HeadExtra({ glyph: headGlyph, color: head });
+  if (!extra) return null;
+  return (
+    <svg
+      viewBox="0 0 864 1152"
+      className="pointer-events-none absolute inset-0 z-[30] h-full w-full"
+      preserveAspectRatio="xMidYMid meet"
+      aria-hidden
+    >
+      {extra}
     </svg>
   );
 }
@@ -315,13 +391,18 @@ export const CharacterFlat = memo(function CharacterFlat({
   const torsoItem = equipped.torso ? itemById(equipped.torso) : undefined;
   const legsItem = equipped.legs ? itemById(equipped.legs) : undefined;
   const charmItem = equipped.charm ? itemById(equipped.charm) : undefined;
-  const onTower = scene === "tower";
   const maskId = `hero-body-${useId().replace(/:/g, "")}`;
   const portrait = female ? "/hero-2d-female.png" : "/hero-2d-male.png";
+  const headGlyph = headItem?.glyph;
+  const showFemaleFace = female && !headHidesFace(headGlyph);
 
   return (
-    <div className={cn("relative h-full w-full", tired && "opacity-80 saturate-75")} role="img" aria-label={RACES[character.race].name}>
-      <img src={portrait} alt="" className="h-full w-full object-contain" />
+    <div
+      className={cn("relative h-full w-full", tired && "opacity-80 saturate-75")}
+      role="img"
+      aria-label={RACES[character.race].name}
+    >
+      <img src={portrait} alt="" className="relative z-0 h-full w-full object-contain" />
       <GearOverlay
         src={portrait}
         maskId={maskId}
@@ -329,11 +410,15 @@ export const CharacterFlat = memo(function CharacterFlat({
         shirt={torsoItem ? fillOf(equipped.torso, "#cbb89a") : undefined}
         pants={legsItem ? fillOf(equipped.legs, "#7c654c") : undefined}
         charm={charmItem ? fillOf(equipped.charm, RARITY_FILL[charmItem.rarity]) : undefined}
-        headGlyph={headItem?.glyph}
+        headGlyph={headGlyph}
         torsoGlyph={torsoItem?.glyph}
         legsGlyph={legsItem?.glyph}
       />
-      {female && !headItem && <FemaleFaceDetail />}
+      {showFemaleFace && <FemaleFaceDetail />}
+      <HeadExtraLayer
+        head={headItem ? fillOf(equipped.head, "#0f766e") : undefined}
+        headGlyph={headGlyph}
+      />
     </div>
   );
 });

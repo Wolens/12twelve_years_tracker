@@ -30,6 +30,15 @@ export function xpSourceHabit(habitId: string, dateISO: string): string {
   return `habit:${habitId}:${dateISO}`;
 }
 
+/** Награда за n-е выполнение привычки в этот день (счётчик +/−). */
+export function xpSourceHabitTick(
+  habitId: string,
+  dateISO: string,
+  tickIndex: number
+): string {
+  return `habit:${habitId}:${dateISO}:${tickIndex}`;
+}
+
 export function totalXpFromLedger(ledger: XpLedgerEntry[]): number {
   return Math.max(0, ledger.reduce((sum, e) => sum + e.amount, 0));
 }

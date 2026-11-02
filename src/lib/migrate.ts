@@ -10,6 +10,32 @@ import { normalizeCharacter, normalizeSeasonFlame, resolveLegacyCharacterIdentit
 import { resolveSphereFilterId } from "./sphere-filter-default";
 import { hasUserProgress } from "./app-state-health";
 import { migratePlanDayFromAssignments } from "./cycle-task-plan";
+import type { HabitCompletions } from "@/types";
+
+/** v17: string[] per day → Record<habitId, count> */
+export function migrateHabitCompletions(raw: unknown): HabitCompletions {
+  if (!raw || typeof raw !== "object") return {};
+  const out: HabitCompletions = {};
+  for (const [date, value] of Object.entries(raw as Record<string, unknown>)) {
+    if (Array.isArray(value)) {
+      const day: Record<string, number> = {};
+      for (const id of value) {
+        if (typeof id === "string" && id) {
+          day[id] = (day[id] ?? 0) + 1;
+        }
+      }
+      if (Object.keys(day).length > 0) out[date] = day;
+    } else if (value && typeof value === "object") {
+      const day: Record<string, number> = {};
+      for (const [habitId, count] of Object.entries(value as Record<string, unknown>)) {
+        const n = typeof count === "number" ? count : Number(count);
+        if (habitId && Number.isFinite(n) && n > 0) day[habitId] = Math.floor(n);
+      }
+      if (Object.keys(day).length > 0) out[date] = day;
+    }
+  }
+  return out;
+}
 
 type LegacyGoal = Goal & {
   week?: number;
@@ -179,6 +205,8 @@ export function migrateAppState(
     habits = habits.map(({ sphereId: _removed, ...rest }) => rest);
   }
 
+  const habitCompletions = migrateHabitCompletions(base.habitCompletions);
+
   return {
     ...base,
     version: DATA_VERSION,
@@ -186,7 +214,7 @@ export function migrateAppState(
     weekHiddenSphereIds: base.weekHiddenSphereIds ?? [],
     dayAssignments,
     habits,
-    habitCompletions: base.habitCompletions ?? {},
+    habitCompletions,
     spheres,
     goals: goalsV11,
     cycleTasks,

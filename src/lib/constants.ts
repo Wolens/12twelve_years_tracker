@@ -20,6 +20,8 @@ export const XP_DAILY_RITUAL_MIN = 12;
 export const XP_DAILY_RITUAL_MAX = 28;
 export const XP_DAILY_QUEST_BONUS = 40;
 export const XP_HABIT = 5;
+/** XP за одно нажатие + у привычки за день */
+export const XP_HABIT_TICK = 2;
 export const DAILY_QUEST_TASKS = 3;
 
 export const MAX_LEVEL = 100;

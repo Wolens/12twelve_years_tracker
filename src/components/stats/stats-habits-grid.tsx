@@ -6,9 +6,10 @@ import { todayISO } from "@/lib/gamification";
 import {
   addDaysISO,
   completionRateForDates,
+  getHabitCount,
   isoWeekday,
-  isCompleted,
   isHabitDueOn,
+  totalCountForDates,
   weekDates,
   WEEKDAY_LABELS,
 } from "@/lib/habits";
@@ -67,6 +68,7 @@ export function StatsHabitsGrid({
     <div className="space-y-4">
       {list.map((habit) => {
         const rate = completionRateForDates(habit, completions, days);
+        const volume = totalCountForDates(habit, completions, days);
         return (
           <div
             key={habit.id}
@@ -76,25 +78,34 @@ export function StatsHabitsGrid({
               <p className="min-w-0 flex-1 truncate text-sm font-medium">{habit.title}</p>
               <span className="text-xs text-muted-foreground tabular-nums">
                 {rate.done}/{rate.due || "—"} · {rate.percent}%
+                {volume > 0 && (
+                  <span className="ml-1 text-muted-foreground/80">· всего {volume}</span>
+                )}
               </span>
             </div>
             <div className="mb-1 flex gap-0.5">
               {days.map((date) => {
                 const due = isHabitDueOn(habit, date);
-                const done = due && isCompleted(completions, date, habit.id);
+                const count = due ? getHabitCount(completions, date, habit.id) : 0;
                 const future = date > today;
+                const title =
+                  count > 0
+                    ? `${date}: ${count} ${count === 1 ? "раз" : "раза"}`
+                    : date;
                 return (
                   <div
                     key={date}
-                    title={date}
+                    title={title}
                     className={cn(
-                      "h-6 flex-1 rounded-sm",
+                      "relative flex h-6 flex-1 items-center justify-center rounded-sm text-[9px] font-semibold tabular-nums",
                       !due && "bg-white/5 opacity-40",
                       due && future && "border border-dashed border-white/15 bg-white/[0.03]",
-                      due && !future && !done && "bg-white/10",
-                      due && !future && done && "bg-primary/70"
+                      due && !future && count === 0 && "bg-white/10",
+                      due && !future && count > 0 && "bg-primary/70 text-primary-foreground"
                     )}
-                  />
+                  >
+                    {due && count > 0 ? count : null}
+                  </div>
                 );
               })}
             </div>
