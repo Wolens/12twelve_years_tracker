@@ -17,7 +17,14 @@ export const metadata: Metadata = {
   description: "Персональный трекер целей по методике 12 недель в году",
   manifest: "/manifest.json",
   appleWebApp: { capable: true, title: "12 недель" },
-  icons: { icon: "/icon.svg", apple: "/icon.svg" },
+  icons: {
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [{ url: "/icon-192.png", sizes: "192x192", type: "image/png" }],
+  },
 };
 
 export const viewport: Viewport = {
