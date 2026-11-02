@@ -137,7 +137,9 @@ export async function pullCloudStateIntoApp(userId: string): Promise<boolean> {
   const remote = await fetchCloudAppState(userId);
   if (!remote || isAppStateEmpty(remote)) return false;
   const local = repairAppState(useAppStore.getState().exportState());
-  if (syncTs(remote.cloudTouchAt) <= syncTs(local.cloudTouchAt)) return false;
+  const localTouch = syncTs(local.cloudTouchAt);
+  const remoteTouch = syncTs(remote.cloudTouchAt);
+  if (remoteTouch <= localTouch) return false;
   const merged = repairAppState(
     mergeAppStateForSync(local, remote, { preferLocalUi: true })
   );
@@ -182,7 +184,7 @@ export async function hydrateAppStateFromCloud(userId: string): Promise<void> {
   }
 }
 
-/** Сохранение: всегда merge с облаком, затем upsert — чтобы не затирать правки с других устройств. */
+/** Сохранение: merge с облаком только если там явно более свежий снимок; иначе локальный (удаления не откатываем). */
 export async function saveCloudAppStateSafe(
   userId: string,
   state: AppState
@@ -190,19 +192,30 @@ export async function saveCloudAppStateSafe(
   beginCloudSave();
   try {
     const savedAt = syncNow();
-    const local = repairAppState({ ...state, cloudTouchAt: savedAt });
     const remote = await fetchCloudAppState(userId);
+    const exported = repairAppState(useAppStore.getState().exportState());
 
     if (!remote || isAppStateEmpty(remote)) {
-      await saveCloudAppState(userId, local);
+      const toSave = { ...exported, cloudTouchAt: savedAt };
+      await saveCloudAppState(userId, toSave);
       useAppStore.setState({ cloudTouchAt: savedAt });
       return;
     }
 
-    const merged = mergeAndApply(local, remote);
+    const localTouch = syncTs(exported.cloudTouchAt);
+    const remoteTouch = syncTs(remote.cloudTouchAt);
+
+    if (localTouch >= remoteTouch) {
+      const toSave = { ...exported, cloudTouchAt: savedAt };
+      await saveCloudAppState(userId, toSave);
+      useAppStore.setState({ cloudTouchAt: savedAt });
+      return;
+    }
+
+    const merged = mergeAndApply(exported, remote);
 
     if (
-      (localHasGuestScratch(local) || isGuestSessionDirty()) &&
+      (localHasGuestScratch(exported) || isGuestSessionDirty()) &&
       appStateRichness(merged) < appStateRichness(remote) - 2
     ) {
       useAppStore.getState().importState(repairAppState(remote));

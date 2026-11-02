@@ -120,15 +120,7 @@ function recoverGoalsFromLedger(
 }
 
 export function repairAppState(state: AppState): AppState {
-  const orphans = orphanSphereIds(state);
   let next: AppState = { ...state };
-
-  if (orphans.length > 0) {
-    next = {
-      ...next,
-      spheres: recoverMissingSpheres(next.spheres, orphans),
-    };
-  }
 
   next = {
     ...next,

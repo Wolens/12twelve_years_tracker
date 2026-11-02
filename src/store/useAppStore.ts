@@ -60,7 +60,12 @@ import {
   pruneHabitCompletions,
   toggleCompletion as toggleHabitCompletionMap,
 } from "@/lib/habits";
-import { hasUserProgress, repairAppState } from "@/lib/app-state-health";
+import {
+  hasUserProgress,
+  orphanSphereIds,
+  recoverMissingSpheres,
+  repairAppState,
+} from "@/lib/app-state-health";
 import { syncNow } from "@/lib/sync-timestamp";
 import {
   dailyQuestBonusAmount,
@@ -323,7 +328,17 @@ const useAppStoreBase = create<Store>()(
       },
 
       repairStateFromLedger: () => {
-        set((state) => repairAppState(state));
+        set((state) => {
+          let next = repairAppState(state);
+          const orphans = orphanSphereIds(next);
+          if (orphans.length > 0) {
+            next = {
+              ...next,
+              spheres: recoverMissingSpheres(next.spheres, orphans),
+            };
+          }
+          return next;
+        });
       },
 
       setTourComplete: () => set({ tourComplete: true }),
@@ -720,6 +735,7 @@ const useAppStoreBase = create<Store>()(
             cycleTasks,
             dayAssignments,
             weeks: recomputeWeekClosed(cycleTasks, s.weeks),
+            cloudTouchAt: syncNow(),
           };
         }),
 
